@@ -410,7 +410,7 @@ typedef struct
 // Platform Specific.
 #if _WIN32
     // A handle to the OpenGL32 DLL.
-    HANDLE hOpenGL32;
+    HMODULE hOpenGL32;
 
     // The dummy window for creating the main rendering context.
     HWND hDummyHWND;
