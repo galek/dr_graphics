@@ -41,15 +41,20 @@
 #ifndef dr_gl_h
 #define dr_gl_h
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <gl/gl.h>
-#include <gl/glext.h>
-
 #ifdef _WIN32
-#include <gl/wglext.h>
+#include <GL/gl.h>
+#include <GL/glext.h>
+#include <GL/wglext.h>
+#else
+#include <GL/glx.h>
+#include <GL/glxext.h>
+#include <GL/glext.h>
 #endif
 
 #ifndef DR_GL_VERSION
@@ -403,6 +408,64 @@ typedef HDC   (WINAPI * PFNWGLGETCURRENTDC) (VOID);
 typedef PROC  (WINAPI * PFNWGLGETPROCADDRESS) (LPCSTR);
 typedef BOOL  (WINAPI * PFNWGLMAKECURRENT) (HDC, HGLRC);
 typedef BOOL  (WINAPI * PFNWGLSHARELISTS) (HGLRC, HGLRC);
+#else
+typedef XVisualInfo* (APIENTRYP PFNGLXCHOOSEVISUALPROC)         (Display *dpy, int screen, int *attribList);
+typedef GLXContext   (APIENTRYP PFNGLXCREATECONTEXTPROC)        (Display *dpy, XVisualInfo *vis, GLXContext shareList, Bool direct);
+typedef void         (APIENTRYP PFNGLXDESTROYCONTEXTPROC)       (Display *dpy, GLXContext ctx);
+typedef Bool         (APIENTRYP PFNGLXMAKECURRENTPROC)          (Display *dpy, GLXDrawable drawable, GLXContext ctx);
+typedef void         (APIENTRYP PFNGLXSWAPBUFFERSPROC)          (Display *dpy, GLXDrawable drawable);
+typedef GLXContext   (APIENTRYP PFNGLXGETCURRENTCONTEXTPROC)    (void);
+typedef const char*  (APIENTRYP PFNGLXQUERYEXTENSIONSTRINGPROC) (Display *dpy, int screen);
+
+// A note on these declarations... GL/glext.h guards against GL_VERSION_1_3 to avoid duplicate
+// declarations (quite rightly). However, in their wisdom, the writers of GL/gl.h (the Mesa3D
+// developers?) have decided that the best course of action is to #define GL_VERSION_1_3, but
+// leave out half of the declarations... great work...
+//
+// So here's what going to happen. Someone down the line is going to try compiling this file with
+// a sane version of gl.h, but the poor guy whose done nothing wrong is going to unnecessarily
+// waste time trying to diagnose this problem (like I have) and then ultimately blame me for it.
+// Well, I'm sorry your time has been wasted because the developers of gl.h and glext.h felt like
+// the best course of action was to duplicate the OpenGL 1.2 declarations and only half of the
+// OpenGL 1.3 declarations even though they could've just left it all in glext.h where it belongs.
+typedef void (APIENTRYP PFNGLGETCOMPRESSEDTEXIMAGEPROC) (GLenum target, GLint level, void *img);
+typedef void (APIENTRYP PFNGLCLIENTACTIVETEXTUREPROC) (GLenum texture);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD1DPROC) (GLenum target, GLdouble s);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD1DVPROC) (GLenum target, const GLdouble *v);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD1FPROC) (GLenum target, GLfloat s);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD1FVPROC) (GLenum target, const GLfloat *v);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD1IPROC) (GLenum target, GLint s);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD1IVPROC) (GLenum target, const GLint *v);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD1SPROC) (GLenum target, GLshort s);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD1SVPROC) (GLenum target, const GLshort *v);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD2DPROC) (GLenum target, GLdouble s, GLdouble t);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD2DVPROC) (GLenum target, const GLdouble *v);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD2FPROC) (GLenum target, GLfloat s, GLfloat t);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD2FVPROC) (GLenum target, const GLfloat *v);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD2IPROC) (GLenum target, GLint s, GLint t);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD2IVPROC) (GLenum target, const GLint *v);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD2SPROC) (GLenum target, GLshort s, GLshort t);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD2SVPROC) (GLenum target, const GLshort *v);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD3DPROC) (GLenum target, GLdouble s, GLdouble t, GLdouble r);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD3DVPROC) (GLenum target, const GLdouble *v);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD3FPROC) (GLenum target, GLfloat s, GLfloat t, GLfloat r);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD3FVPROC) (GLenum target, const GLfloat *v);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD3IPROC) (GLenum target, GLint s, GLint t, GLint r);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD3IVPROC) (GLenum target, const GLint *v);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD3SPROC) (GLenum target, GLshort s, GLshort t, GLshort r);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD3SVPROC) (GLenum target, const GLshort *v);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD4DPROC) (GLenum target, GLdouble s, GLdouble t, GLdouble r, GLdouble q);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD4DVPROC) (GLenum target, const GLdouble *v);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD4FPROC) (GLenum target, GLfloat s, GLfloat t, GLfloat r, GLfloat q);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD4FVPROC) (GLenum target, const GLfloat *v);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD4IPROC) (GLenum target, GLint s, GLint t, GLint r, GLint q);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD4IVPROC) (GLenum target, const GLint *v);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD4SPROC) (GLenum target, GLshort s, GLshort t, GLshort r, GLshort q);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD4SVPROC) (GLenum target, const GLshort *v);
+typedef void (APIENTRYP PFNGLLOADTRANSPOSEMATRIXFPROC) (const GLfloat *m);
+typedef void (APIENTRYP PFNGLLOADTRANSPOSEMATRIXDPROC) (const GLdouble *m);
+typedef void (APIENTRYP PFNGLMULTTRANSPOSEMATRIXFPROC) (const GLfloat *m);
+typedef void (APIENTRYP PFNGLMULTTRANSPOSEMATRIXDPROC) (const GLdouble *m);
 #endif
 
 typedef struct
@@ -434,6 +497,43 @@ typedef struct
     PFNWGLGETCURRENTDC GetCurrentDC;
     PFNWGLGETPROCADDRESS GetProcAddress;
     PFNWGLMAKECURRENT MakeCurrent;
+#else
+    // A handle to the OpenGL SO.
+    void* pOpenGLSO;
+    
+    // The display.
+    Display* pDisplay;
+    
+    // Whether or not the context owns the display. This is used to control whether or not the
+    // shutdown routine should close the display.
+    bool ownsDisplay;
+    
+    // The window that was used to create the context.
+    Window dummyWindow;
+
+    // The window that rendering operations are currently taking place on.
+    Window currentWindow;
+
+    // The OpenGL rendering context.
+    GLXContext rc;
+
+    // The colour map to use when creating windows.
+    Colormap colormap;
+
+    // The visual to use when creating windows.
+    XVisualInfo* pFBVisualInfo;
+
+    PFNGLXCHOOSEVISUALPROC ChooseVisual;
+    PFNGLXCREATECONTEXTPROC CreateContext;
+    PFNGLXDESTROYCONTEXTPROC DestroyContext;
+    PFNGLXMAKECURRENTPROC MakeCurrent;
+    PFNGLXSWAPBUFFERSPROC SwapBuffers;
+    PFNGLXGETCURRENTCONTEXTPROC GetCurrentContext;
+    PFNGLXQUERYEXTENSIONSTRINGPROC QueryExtensionString;
+    PFNGLXGETCURRENTDISPLAYPROC GetCurrentDisplay;
+    PFNGLXCHOOSEFBCONFIGPROC ChooseFBConfig;
+    PFNGLXGETVISUALFROMFBCONFIGPROC GetVisualFromFBConfig;
+    PFNGLXGETPROCADDRESSPROC GetProcAddress;
 #endif
 
     // OpenGL 1.1
@@ -1047,8 +1147,12 @@ typedef struct
 #endif
 
 #ifdef DR_GL_ENABLE_EXT_swap_control
+#ifdef _WIN32
     PFNWGLSWAPINTERVALEXTPROC SwapIntervalEXT;
     PFNWGLGETSWAPINTERVALEXTPROC GetSwapIntervalEXT;
+#else
+    PFNGLXSWAPINTERVALEXTPROC SwapIntervalEXT;
+#endif
 #endif
 
 
@@ -1096,10 +1200,36 @@ void* drgl__get_proc_address(drgl* pGL, const char* name)
     return GetProcAddress(pGL->hOpenGL32, name);
 }
 #else
-void* drgl__get_gl_proc_address(const char* name)
+#include <dlfcn.h>
+
+void* drgl__get_proc_address(drgl* pGL, const char* name)
 {
-    // TODO: Implement Me.
-    return NULL;
+    assert(pGL != NULL);
+    assert(pGL->GetProcAddress != NULL);
+    
+    void* func = NULL;
+    if (pGL->GetProcAddress != NULL) {
+        func = pGL->GetProcAddress(name);
+    }
+    
+    if (func == NULL) {
+        func = dlsym(pGL->pOpenGLSO, name);
+    }
+
+    return func;
+}
+
+Window drgl__create_dummy_x11_window(drgl* pGL)
+{
+    assert(pGL != NULL);
+    
+    XSetWindowAttributes wa;
+    wa.colormap = pGL->colormap;
+    wa.border_pixel = 0;
+
+    // Window's can not have dimensions of 0 in X11. We stick with dimensions of 1.
+    return XCreateWindow(pGL->pDisplay, RootWindow(pGL->pDisplay, pGL->pFBVisualInfo->screen), 0, 0, 1, 1,
+        0, pGL->pFBVisualInfo->depth, InputOutput, pGL->pFBVisualInfo->visual, CWBorderPixel | CWColormap, &wa);
 }
 #endif
 
@@ -1174,7 +1304,81 @@ bool drglInit(drgl* pGL)
 
     pGL->MakeCurrent(pGL->hDummyDC, pGL->hRC);
 #else
-    // TODO: Linux.
+    pGL->pOpenGLSO = dlopen("libGL.so", RTLD_LAZY | RTLD_LOCAL);
+    if (pGL->pOpenGLSO == NULL) {
+        goto on_error;
+    }
+    
+    pGL->ChooseVisual          = (PFNGLXCHOOSEVISUALPROC         )dlsym(pGL->pOpenGLSO, "glXChooseVisual");
+    pGL->CreateContext         = (PFNGLXCREATECONTEXTPROC        )dlsym(pGL->pOpenGLSO, "glXCreateContext");
+    pGL->DestroyContext        = (PFNGLXDESTROYCONTEXTPROC       )dlsym(pGL->pOpenGLSO, "glXDestroyContext");
+    pGL->MakeCurrent           = (PFNGLXMAKECURRENTPROC          )dlsym(pGL->pOpenGLSO, "glXMakeCurrent");
+    pGL->SwapBuffers           = (PFNGLXSWAPBUFFERSPROC          )dlsym(pGL->pOpenGLSO, "glXSwapBuffers");
+    pGL->GetCurrentContext     = (PFNGLXGETCURRENTCONTEXTPROC    )dlsym(pGL->pOpenGLSO, "glXGetCurrentContext");
+    pGL->QueryExtensionString  = (PFNGLXQUERYEXTENSIONSTRINGPROC )dlsym(pGL->pOpenGLSO, "glXQueryExtensionString");
+    pGL->GetCurrentDisplay     = (PFNGLXGETCURRENTDISPLAYPROC    )dlsym(pGL->pOpenGLSO, "glXGetCurrentDisplay");
+    pGL->ChooseFBConfig        = (PFNGLXCHOOSEFBCONFIGPROC       )dlsym(pGL->pOpenGLSO, "glXChooseFBConfig");
+    pGL->GetVisualFromFBConfig = (PFNGLXGETVISUALFROMFBCONFIGPROC)dlsym(pGL->pOpenGLSO, "glXGetVisualFromFBConfig");
+    pGL->GetProcAddress        = (PFNGLXGETPROCADDRESSPROC       )dlsym(pGL->pOpenGLSO, "glXGetProcAddress");
+    
+    if (pGL->ChooseVisual          == NULL ||
+        pGL->CreateContext         == NULL ||
+        pGL->DestroyContext        == NULL ||
+        pGL->MakeCurrent           == NULL ||
+        pGL->SwapBuffers           == NULL ||
+        pGL->GetCurrentContext     == NULL ||
+        pGL->QueryExtensionString  == NULL ||
+        pGL->GetCurrentDisplay     == NULL ||
+        pGL->ChooseFBConfig        == NULL ||
+        pGL->GetVisualFromFBConfig == NULL ||
+        pGL->GetProcAddress        == NULL) {
+        goto on_error;
+    }
+    
+    // TODO: Add support for an application-defined display.
+    pGL->ownsDisplay = true;
+    pGL->pDisplay = XOpenDisplay(NULL);
+    if (pGL->pDisplay == NULL) {
+        goto on_error;
+    }
+    
+    int attribs[] = {
+        GLX_RGBA,
+        GLX_RED_SIZE,      8,
+        GLX_GREEN_SIZE,    8,
+        GLX_BLUE_SIZE,     8,
+        GLX_ALPHA_SIZE,    8,
+        GLX_DEPTH_SIZE,    24,
+        GLX_STENCIL_SIZE,  8,
+        None,                   // Reserved for GLX_DOUBLEBUFFER
+        None, None
+    };
+    
+    // TODO: Add support for single buffered context's.
+    //if (!isSingleBuffered) {
+        attribs[13] = GLX_DOUBLEBUFFER;
+    //}
+    
+    pGL->pFBVisualInfo = pGL->ChooseVisual(pGL->pDisplay, DefaultScreen(pGL->pDisplay), attribs);
+    if (pGL->pFBVisualInfo == NULL) {
+        goto on_error;
+    }
+    
+    pGL->colormap = XCreateColormap(pGL->pDisplay, RootWindow(pGL->pDisplay, pGL->pFBVisualInfo->screen), pGL->pFBVisualInfo->visual, AllocNone);
+    
+    pGL->rc = pGL->CreateContext(pGL->pDisplay, pGL->pFBVisualInfo, NULL, GL_TRUE);
+    if (pGL->rc == NULL) {
+        goto on_error;
+    }
+    
+    // We cannot call any OpenGL APIs until a context is made current. In order to make a context current
+    // we will need a window. We just use a dummy window for this.
+    pGL->dummyWindow = drgl__create_dummy_x11_window(pGL);
+    if (pGL->dummyWindow == 0) {
+        goto on_error;
+    }
+    
+    pGL->MakeCurrent(pGL->pDisplay, pGL->dummyWindow, pGL->rc);
 #endif
 
 
@@ -1796,7 +2000,9 @@ bool drglInit(drgl* pGL)
     pGL->GetSwapIntervalEXT = (PFNWGLGETSWAPINTERVALEXTPROC)drgl__get_proc_address(pGL, "wglGetSwapIntervalEXT");
 #endif
 #else
-    // TODO: GLX extensions.
+#ifdef DR_GL_ENABLE_EXT_swap_control
+    pGL->SwapIntervalEXT = (PFNGLXSWAPINTERVALEXTPROC)drgl__get_proc_address(pGL, "glXSwapIntervalEXT");
+#endif
 #endif
 
 
@@ -1814,7 +2020,6 @@ void drglUninit(drgl* pGL)
         return;
     }
 
-
 #ifdef _WIN32
     if (pGL->hDummyHWND) {
         DestroyWindow(pGL->hDummyHWND);
@@ -1828,7 +2033,21 @@ void drglUninit(drgl* pGL)
         FreeLibrary(pGL->hOpenGL32);
     }
 #else
-    // TODO: Linux
+    if (pGL->dummyWindow) {
+        XDestroyWindow(pGL->pDisplay, pGL->dummyWindow);
+    }
+    
+    if (pGL->rc) {
+        pGL->DestroyContext(pGL->pDisplay, pGL->rc);
+    }
+    
+    if (pGL->ownsDisplay) {
+        XCloseDisplay(pGL->pDisplay);
+    }
+    
+    if (pGL->pOpenGLSO != NULL) {
+        dlclose(pGL->pOpenGLSO);
+    }
 #endif
 }
 
