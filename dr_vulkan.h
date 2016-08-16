@@ -3331,7 +3331,7 @@ static void* g_pVulkanSO = NULL;
 PFN_vkVoidFunction drvk_get_proc_address(const char* name)
 {
     if (g_pVulkanSO == NULL) {
-        g_pVulkanSO = dlopen(name, RTLD_LAZY | RTLD_LOCAL);
+        g_pVulkanSO = dlopen("libvulkan.so", RTLD_LAZY | RTLD_LOCAL);
         if (g_pVulkanSO == NULL) {
             return NULL;
         }
