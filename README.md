@@ -1,7 +1,7 @@
-dr_gfx - Simple Graphics Library
-================================
-dr_gfx is a collection of simple libraries related to graphics. Every library is focused on simplicity over
-flexibility.
+dr_graphics - Simple Graphics Library
+=====================================
+dr_graphics is a collection of simple libraries related to graphics. Every library is focused on
+simplicity over flexibility.
 
 C/C++, public domain. Each file is independent of the others, except where noted.
 
