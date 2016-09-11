@@ -1167,6 +1167,26 @@ bool drglInit(drgl* pGL);
 void drglUninit(drgl* pGL);
 
 
+// Allocation function.
+void* drglMalloc(size_t sz);
+
+// Frees any memory that was allocated internally by dr_gl.
+void drglFree(void* p);
+
+
+// Helper for creating and compiling a shader object.
+//
+// Destroy the object with glDeleteShader(). Free the returned error string with drglFree().
+GLuint drglCreateShader(drgl* pGL, GLenum type, const GLchar* src, GLchar** pErrorOut);
+
+// Helper for creating a program from a list of shaders.
+GLuint drglCreateProgram(drgl* pGL, GLuint shaderCount, const GLuint* pShaders, GLchar** pErrorOut);
+
+// Helper for creating a simple vertex/fragment program.
+GLuint drglCreateSimpleProgramFromStrings(drgl* pGL, const char* srcVS, const char* srcFS, GLchar** pErrorOut);
+
+
+
 
 #ifdef __cplusplus
 }
@@ -2049,6 +2069,151 @@ void drglUninit(drgl* pGL)
         dlclose(pGL->pOpenGLSO);
     }
 #endif
+}
+
+
+void* drglMalloc(size_t sz)
+{
+    return malloc(sz);
+}
+
+void drglFree(void* p)
+{
+    free(p);
+}
+
+
+GLchar* drglAllocString(const char* str)
+{
+    size_t len = strlen(str);
+    GLchar* result = (GLchar*)malloc(len + 1);
+    if (result == NULL) {
+        return result;
+    }
+
+    for (size_t i = 0; i <= len; ++i) {
+        result[i] = str[i];
+    }
+
+    return result;
+}
+
+GLuint drglCreateShader(drgl* pGL, GLenum type, const GLchar* src, GLchar** pErrorOut)
+{
+    if (pErrorOut != NULL) *pErrorOut = NULL;    // <-- Safety.
+    if (pGL == NULL || src == NULL) return 0;
+    
+
+    GLuint shader = pGL->CreateShader(type);
+    if (shader == 0) {
+        if (pErrorOut) *pErrorOut = drglAllocString("Failed to create shader object.");
+        return 0;
+    }
+
+    pGL->ShaderSource(shader, 1, &src, NULL);
+    pGL->CompileShader(shader);
+
+    GLint compileResult;
+    pGL->GetShaderiv(shader, GL_COMPILE_STATUS, &compileResult);
+    if (compileResult == GL_FALSE) {
+        if (pErrorOut != NULL) {
+            GLint errorLen;
+            pGL->GetShaderiv(shader, GL_INFO_LOG_LENGTH, &errorLen);
+            if (errorLen > 1) {
+                *pErrorOut = (char*)drglMalloc(errorLen);
+                if (*pErrorOut != NULL) {
+                    pGL->GetShaderInfoLog(shader, errorLen, NULL, *pErrorOut);
+                }
+            }
+        }
+
+        pGL->DeleteShader(shader);
+        return 0;
+    }
+
+    return shader;
+}
+
+GLuint drglCreateProgram(drgl* pGL, GLuint shaderCount, const GLuint* pShaders, GLchar** pErrorOut)
+{
+    if (pErrorOut != NULL) *pErrorOut = NULL;   // <-- Safety.
+    if (pGL == NULL || shaderCount == 0 || pShaders == NULL) return 0;
+    
+
+    GLuint program = pGL->CreateProgram();
+    if (program == 0) {
+        if (pErrorOut) *pErrorOut = drglAllocString("Failed to create program object.");
+        return 0;
+    }
+
+    for (GLuint iShader = 0; iShader < shaderCount; ++iShader) {
+        pGL->AttachShader(program, pShaders[iShader]);
+    }
+
+    pGL->LinkProgram(program);
+    
+    GLint linkStatus;
+    pGL->GetProgramiv(program, GL_LINK_STATUS, &linkStatus);
+    if (linkStatus == GL_FALSE) {
+        if (pErrorOut != NULL) {
+            GLint errorLen;
+            pGL->GetProgramiv(program, GL_INFO_LOG_LENGTH, &errorLen);
+            if (errorLen > 1) {
+                *pErrorOut = (char*)drglMalloc(errorLen);
+                if (*pErrorOut != NULL) {
+                    pGL->GetProgramInfoLog(program, errorLen, NULL, *pErrorOut);
+                }
+            }
+        }
+
+        pGL->DeleteProgram(program);
+        return 0;
+    }
+    
+
+    return program;
+}
+
+GLuint drglCreateSimpleProgramFromStrings(drgl* pGL, const char* srcVS, const char* srcFS, GLchar** pErrorOut)
+{
+    if (pErrorOut != NULL) *pErrorOut = NULL;   // <-- Safety.
+    if (pGL == NULL) return 0;
+    
+    GLuint shaders[2] = {0, 0};
+    GLuint shaderCount = 0;
+
+    // Vertex.
+    if (srcVS != NULL) {
+        shaders[shaderCount] = drglCreateShader(pGL, GL_VERTEX_SHADER, srcVS, pErrorOut);
+        if (shaders[shaderCount] == 0) {
+            return 0;
+        }
+
+        shaderCount += 1;
+    }
+    
+    // Fragment.
+    if (srcFS != NULL) {
+        shaders[shaderCount] = drglCreateShader(pGL, GL_FRAGMENT_SHADER, srcFS, pErrorOut);
+        if (shaders[shaderCount] == 0) {
+            return 0;
+        }
+
+        shaderCount += 1;
+    }
+
+    if (shaderCount == 0) {
+        if (pErrorOut) *pErrorOut = drglAllocString("No shader strings specified.");
+        return 0;
+    }
+
+    GLuint program = drglCreateProgram(pGL, shaderCount, shaders, pErrorOut);
+    
+    for (GLuint iShader = 0; iShader < shaderCount; ++iShader) {
+        pGL->DeleteShader(shaders[iShader]);
+    }
+
+    return program;
 }
 
 #endif  //DR_GL_IMPLEMENTATION
