@@ -37,6 +37,9 @@
 // #define DR_GL_ENABLE_EXT_framebuffer_blit
 // #define DR_GL_ENABLE_EXT_framebuffer_multisample
 // #define DR_GL_ENABLE_EXT_framebuffer_object
+// #define DR_GL_ENABLE_EXT_multisample
+// #define DR_GL_ENABLE_ARB_multisample
+// #define DR_GL_ENABLE_ARB_texture_multisample
 
 #ifndef dr_gl_h
 #define dr_gl_h
@@ -47,11 +50,21 @@
 extern "C" {
 #endif
 
+// Platform Detection
 #ifdef _WIN32
+#define DRGL_WIN32
+#define DRGL_WGL
+#else
+#define DRGL_UNIX
+#define DRGL_X11
+#endif
+
+#ifdef DRGL_WGL
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <GL/wglext.h>
-#else
+#endif
+#ifdef DRGL_X11
 #include <GL/glx.h>
 #include <GL/glxext.h>
 #include <GL/glext.h>
@@ -398,7 +411,7 @@ typedef void (APIENTRYP PFNGLVERTEX4SV) (const GLshort *v);
 typedef void (APIENTRYP PFNGLVERTEXPOINTER) (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 typedef void (APIENTRYP PFNGLVIEWPORT) (GLint x, GLint y, GLsizei width, GLsizei height);
 
-#ifdef _WIN32
+#ifdef DRGL_WGL
 typedef BOOL  (WINAPI * PFNWGLCOPYCONTEXT) (HGLRC, HGLRC, UINT);
 typedef HGLRC (WINAPI * PFNWGLCREATECONTEXT) (HDC);
 typedef HGLRC (WINAPI * PFNWGLCREATELAYERCONTEXT) (HDC, int);
@@ -408,7 +421,8 @@ typedef HDC   (WINAPI * PFNWGLGETCURRENTDC) (VOID);
 typedef PROC  (WINAPI * PFNWGLGETPROCADDRESS) (LPCSTR);
 typedef BOOL  (WINAPI * PFNWGLMAKECURRENT) (HDC, HGLRC);
 typedef BOOL  (WINAPI * PFNWGLSHARELISTS) (HGLRC, HGLRC);
-#else
+#endif
+#ifdef DRGL_X11
 typedef XVisualInfo* (APIENTRYP PFNGLXCHOOSEVISUALPROC)         (Display *dpy, int screen, int *attribList);
 typedef GLXContext   (APIENTRYP PFNGLXCREATECONTEXTPROC)        (Display *dpy, XVisualInfo *vis, GLXContext shareList, Bool direct);
 typedef void         (APIENTRYP PFNGLXDESTROYCONTEXTPROC)       (Display *dpy, GLXContext ctx);
@@ -471,7 +485,7 @@ typedef void (APIENTRYP PFNGLMULTTRANSPOSEMATRIXDPROC) (const GLdouble *m);
 typedef struct
 {
 // Platform Specific.
-#if _WIN32
+#ifdef DRGL_WGL
     // A handle to the OpenGL32 DLL.
     HMODULE hOpenGL32;
 
@@ -497,7 +511,9 @@ typedef struct
     PFNWGLGETCURRENTDC GetCurrentDC;
     PFNWGLGETPROCADDRESS GetProcAddress;
     PFNWGLMAKECURRENT MakeCurrent;
-#else
+#endif
+
+#ifdef DRGL_X11
     // A handle to the OpenGL SO.
     void* pOpenGLSO;
     
@@ -1115,6 +1131,11 @@ typedef struct
     PFNGLUNIFORMMATRIX4X3FVPROC UniformMatrix4x3fv;
 #endif
 
+    // OpenGL 3.0
+#if DR_GL_VERSION >= 300
+    PFNGLGETSTRINGIPROC GetStringi;
+#endif
+
 
 
     // Extensions
@@ -1146,11 +1167,29 @@ typedef struct
     PFNGLGENERATEMIPMAPEXTPROC GenerateMipmapEXT;
 #endif
 
+#ifdef DR_GL_ENABLE_EXT_multisample
+    PFNGLSAMPLEMASKEXTPROC SampleMaskEXT;
+    PFNGLSAMPLEPATTERNEXTPROC SamplePatternEXT;
+#endif
+
+#ifdef DR_GL_ENABLE_ARB_multisample
+    PFNGLSAMPLECOVERAGEARBPROC SampleCoverageARB;
+#endif
+
+#ifdef DR_GL_ENABLE_ARB_texture_multisample
+    PFNGLTEXIMAGE2DMULTISAMPLEPROC TexImage2DMultisample;
+    PFNGLTEXIMAGE3DMULTISAMPLEPROC TexIamge3DMultisample;
+    PFNGLGETMULTISAMPLEFVPROC GetMultisamplefv;
+    PFNGLSAMPLEMASKIPROC SampleMaski;
+#endif
+
+
 #ifdef DR_GL_ENABLE_EXT_swap_control
-#ifdef _WIN32
+#ifdef DRGL_WGL
     PFNWGLSWAPINTERVALEXTPROC SwapIntervalEXT;
     PFNWGLGETSWAPINTERVALEXTPROC GetSwapIntervalEXT;
-#else
+#endif
+#ifdef DRGL_X11
     PFNGLXSWAPINTERVALEXTPROC SwapIntervalEXT;
 #endif
 #endif
@@ -1186,12 +1225,15 @@ GLuint drglCreateProgram(drgl* pGL, GLuint shaderCount, const GLuint* pShaders, 
 GLuint drglCreateSimpleProgramFromStrings(drgl* pGL, const char* srcVS, const char* srcFS, GLchar** pErrorOut);
 
 
+// Determines whether or not the given extension is supported.
+GLboolean drglIsExtensionSupported(drgl* pGL, const char* ext);
+
 
 
 #ifdef __cplusplus
 }
 #endif
-#endif  //dr_util_h
+#endif  //dr_gl_h
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1201,7 +1243,7 @@ GLuint drglCreateSimpleProgramFromStrings(drgl* pGL, const char* srcVS, const ch
 ///////////////////////////////////////////////////////////////////////////////
 #ifdef DR_GL_IMPLEMENTATION
 
-#ifdef _WIN32
+#ifdef DRGL_WGL
 static LRESULT DummyWindowProcWin32(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     return DefWindowProc(hWnd, msg, wParam, lParam);
@@ -1219,7 +1261,9 @@ void* drgl__get_proc_address(drgl* pGL, const char* name)
 
     return GetProcAddress(pGL->hOpenGL32, name);
 }
-#else
+#endif
+
+#ifdef DRGL_X11
 #include <dlfcn.h>
 
 void* drgl__get_proc_address(drgl* pGL, const char* name)
@@ -1264,7 +1308,7 @@ bool drglInit(drgl* pGL)
 
     memset(pGL, 0, sizeof(*pGL));
 
-#ifdef _WIN32
+#ifdef DRGL_WGL
     pGL->hOpenGL32 = LoadLibraryW(L"OpenGL32.dll");
     if (pGL->hOpenGL32 == NULL) {
         goto on_error;
@@ -1323,7 +1367,9 @@ bool drglInit(drgl* pGL)
     }
 
     pGL->MakeCurrent(pGL->hDummyDC, pGL->hRC);
-#else
+#endif
+
+#ifdef DRGL_X11
     pGL->pOpenGLSO = dlopen("libGL.so", RTLD_LAZY | RTLD_LOCAL);
     if (pGL->pOpenGLSO == NULL) {
         goto on_error;
@@ -1982,6 +2028,11 @@ bool drglInit(drgl* pGL)
     pGL->UniformMatrix4x3fv = (PFNGLUNIFORMMATRIX4X3FVPROC)drgl__get_proc_address(pGL, "glUniformMatrix4x3fv");
 #endif
 
+    // OpenGL 3.0 (Incomplete)
+#if DR_GL_VERSION >= 300
+    pGL->GetStringi = (PFNGLGETSTRINGIPROC)drgl__get_proc_address(pGL, "glGetStringi");
+#endif
+
 
     // Cross-platform extensions
 #ifdef DR_GL_ENABLE_EXT_framebuffer_blit
@@ -2012,14 +2063,31 @@ bool drglInit(drgl* pGL)
     pGL->GenerateMipmapEXT = (PFNGLGENERATEMIPMAPEXTPROC)drgl__get_proc_address(pGL, "glGenerateMipmapEXT");
 #endif
 
+#ifdef DR_GL_ENABLE_EXT_multisample
+    pGL->SampleMaskEXT = (PFNGLSAMPLEMASKEXTPROC)drgl__get_proc_address(pGL, "glSampleMaskEXT");
+    pGL->SamplePatternEXT = (PFNGLSAMPLEPATTERNEXTPROC)drgl__get_proc_address(pGL, "glSamplePatternEXT");
+#endif
+
+#ifdef DR_GL_ENABLE_ARB_multisample
+    pGL->SampleCoverageARB = (PFNGLSAMPLECOVERAGEARBPROC)drgl__get_proc_address(pGL, "glSampleCoverageARB");
+#endif
+
+#ifdef DR_GL_ENABLE_ARB_texture_multisample
+    pGL->TexImage2DMultisample = (PFNGLTEXIMAGE2DMULTISAMPLEPROC)drgl__get_proc_address(pGL, "glTexImage2DMultisample");
+    pGL->TexIamge3DMultisample = (PFNGLTEXIMAGE3DMULTISAMPLEPROC)drgl__get_proc_address(pGL, "glTexIamge3DMultisample");
+    pGL->GetMultisamplefv = (PFNGLGETMULTISAMPLEFVPROC)drgl__get_proc_address(pGL, "glGetMultisamplefv");
+    pGL->SampleMaski = (PFNGLSAMPLEMASKIPROC)drgl__get_proc_address(pGL, "glSampleMaski");
+#endif
+
 
     // Platform-specific extensions
-#ifdef _WIN32
+#ifdef DRGL_WGL
 #ifdef DR_GL_ENABLE_EXT_swap_control
     pGL->SwapIntervalEXT    = (PFNWGLSWAPINTERVALEXTPROC   )drgl__get_proc_address(pGL, "wglSwapIntervalEXT");
     pGL->GetSwapIntervalEXT = (PFNWGLGETSWAPINTERVALEXTPROC)drgl__get_proc_address(pGL, "wglGetSwapIntervalEXT");
 #endif
-#else
+#endif
+#ifdef DRGL_X11
 #ifdef DR_GL_ENABLE_EXT_swap_control
     pGL->SwapIntervalEXT = (PFNGLXSWAPINTERVALEXTPROC)drgl__get_proc_address(pGL, "glXSwapIntervalEXT");
 #endif
@@ -2040,7 +2108,7 @@ void drglUninit(drgl* pGL)
         return;
     }
 
-#ifdef _WIN32
+#ifdef DRGL_WGL
     if (pGL->hDummyHWND) {
         DestroyWindow(pGL->hDummyHWND);
     }
@@ -2052,7 +2120,9 @@ void drglUninit(drgl* pGL)
     if (pGL->hOpenGL32 != NULL) {
         FreeLibrary(pGL->hOpenGL32);
     }
-#else
+#endif
+
+#ifdef DRGL_X11
     if (pGL->dummyWindow) {
         XDestroyWindow(pGL->pDisplay, pGL->dummyWindow);
     }
@@ -2214,6 +2284,103 @@ GLuint drglCreateSimpleProgramFromStrings(drgl* pGL, const char* srcVS, const ch
     }
 
     return program;
+}
+
+
+GLboolean drglIsExtensionInString(const char* ext, const char* str)
+{
+    if (ext == NULL || str == NULL) return GL_FALSE;
+
+    const char* ext2beg = str;
+    const char* ext2end = ext2beg;
+
+    for (;;) {
+        while (ext2end[0] != ' ' && ext2end[0] != '\0') {
+            ext2end += 1;
+        }
+
+        if (strncmp(ext, ext2beg, ext2end - ext2beg) == 0) {
+            return GL_TRUE;
+        }
+
+        // Break if we've reached the end. Otherwise, just move to start fo the next extension.
+        if (ext2end[0] == '\0') {
+            break;
+        } else {
+            ext2beg = ext2end + 1;
+            ext2end = ext2beg;
+        }
+    }
+
+    return GL_FALSE;
+}
+
+#ifdef DRGL_WGL
+GLboolean drglIsWGLExtensionSupported(drgl* pGL, const char* ext)
+{
+    PFNWGLGETEXTENSIONSSTRINGARBPROC _wglGetExtensionsStringARB = (PFNWGLGETEXTENSIONSSTRINGARBPROC)drgl__get_proc_address(pGL, "wglGetExtensionsStringARB");
+    if (_wglGetExtensionsStringARB) {
+        return drglIsExtensionInString(ext, _wglGetExtensionsStringARB(pGL->hDummyDC));
+    }
+
+    PFNWGLGETEXTENSIONSSTRINGEXTPROC _wglGetExtensionsStringEXT = (PFNWGLGETEXTENSIONSSTRINGEXTPROC)drgl__get_proc_address(pGL, "wglGetExtensionsStringEXT");
+    if (_wglGetExtensionsStringEXT) {
+        return drglIsExtensionInString(ext, _wglGetExtensionsStringEXT());
+    }
+
+    return GL_FALSE;
+}
+#endif
+
+#ifdef DRGL_X11
+GLboolean drglIsX11ExtensionSupported(drgl* pGL, const char* ext)
+{
+    // TODO: IMPLEMENT ME
+    return GL_FALSE;
+}
+#endif
+
+GLboolean drglIsExtensionSupported(drgl* pGL, const char* ext)
+{
+#if GL_VERSION >= 300
+    if (pGL->GetStringi) {
+        GLint supportedExtensionCount = 0;
+        pGL->GetIntegerv(GL_NUM_EXTENSIONS, &supportedExtensionCount);
+
+        for (GLint i = 0; i < supportedExtensionCount; ++i) {
+            const char* supportedExtension = (const char*)pGL->GetStringi(GL_EXTENSIONS, i);
+            if (supportedExtension != NULL) {
+                if (strcmp(supportedExtension, ext) == 0) {
+                    return GL_TRUE;
+                }
+            }
+        }
+
+        // It's not a core extension. Check platform-specific extensions.
+        GLboolean isSupported = GL_FALSE;
+#ifdef DRGL_WGL
+        isSupported = drglIsWGLExtensionSupported(pGL, ext);
+#endif
+#ifdef DRGL_X11
+        isSupported = drglIsX11ExtensionSupported(pGL, ext);
+#endif
+
+        return isSupported;
+    }
+#endif
+
+    // Fall back to old style.
+    GLboolean isSupported = drglIsExtensionInString(ext, (const char*)pGL->GetString(GL_EXTENSIONS));
+    if (!isSupported) {
+#ifdef DRGL_WGL
+        isSupported = drglIsWGLExtensionSupported(pGL, ext);
+#endif
+#ifdef DRGL_X11
+        isSupported = drglIsX11ExtensionSupported(pGL, ext);
+#endif
+    }
+
+    return isSupported;
 }
 
 #endif  //DR_GL_IMPLEMENTATION
