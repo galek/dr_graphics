@@ -2979,6 +2979,46 @@ VkBool32 drvkInit(VkFlags whatToInit);
 // Uninitializes dr_vulkan.
 void drvkUninit();
 
+
+//// Helpers for Initializing Structures ////
+VkImageCreateInfo drvkDefaultImageCreateInfo();
+VkImageCreateInfo drvkSimpleImageCreateInfo2D(VkFormat format, uint32_t width, uint32_t height, uint32_t mipLevels, VkImageUsageFlags usage);
+VkImageViewCreateInfo drvkDefaultImageViewCreateInfo();
+VkFramebufferCreateInfo drvkDefaultFramebufferCreateInfo();
+VkRenderPassCreateInfo drvkDefaultRenderPassCreateInfo();
+VkSubmitInfo drvkDefaultSubmitInfo();
+VkImageMemoryBarrier drvkDefaultImageMemoryBarrier();
+VkComponentMapping drvkDefaultComponentMapping();
+VkImageSubresourceRange drvkImageSubresourceRange(VkImageAspectFlags aspectMask, uint32_t baseMipLevel, uint32_t levelCount, uint32_t baseArrayLayer, uint32_t layerCount);
+VkExtent3D drvkExtent3D(uint32_t width, uint32_t height, uint32_t depth);
+VkRect2D drvkRect2D(int32_t x, int32_t y, uint32_t width, uint32_t height);
+VkClearColorValue drvkClearColorValue4f(float r, float g, float b, float a);
+VkClearColorValue drvkClearColorValue4i(int32_t r, int32_t g, int32_t b, int32_t a);
+VkClearColorValue drvkClearColorValue4ui(uint32_t r, uint32_t g, uint32_t b, uint32_t a);
+VkClearValue drvkClearValueColor4f(float r, float g, float b, float a);
+VkClearValue drvkClearValueColor4i(int32_t r, int32_t g, int32_t b, int32_t a);
+VkClearValue drvkClearValueColor4ui(uint32_t r, uint32_t g, uint32_t b, uint32_t a);
+VkClearValue drvkClearValueDepthStencil(float depth, uint32_t stencil);
+VkCommandBufferAllocateInfo drvkCommandBufferAllocateInfo(VkCommandPool commandPool, VkCommandBufferLevel level, uint32_t commandBufferCount);
+VkCommandBufferBeginInfo drvkCommandBufferBeginInfo(VkCommandBufferUsageFlags flags, VkCommandBufferInheritanceInfo* pInheritanceInfo);
+
+
+//// Misc High-Level Helpers ////
+
+// Allocates a block of memory for the given image and binds it.
+//
+// Note that this is not the most efficient way of binding memory for an image, but it should work well for prototyping and whatnot. Doing custom
+// memory management may be a better alternative.
+VkResult drvkAllocateAndBindImageMemory(VkPhysicalDevice physicalDevice, VkDevice device, VkImage image, VkMemoryPropertyFlags memoryPropertyFlags, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory);
+
+// Helper for creating an image view with common properties.
+VkResult drvkCreateSimpleImageView(VkDevice device, VkImage image, VkImageViewType viewType, VkFormat format, VkImageSubresourceRange subresourceRange, const VkAllocationCallbacks* pAllocator, VkImageView* pView);
+
+// Helper for allocating command buffers.
+VkResult drvkAllocateCommandBuffers(VkDevice device, VkCommandPool commandPool, VkCommandBufferLevel level, uint32_t commandBufferCount, VkCommandBuffer* pCommandBuffers);
+
+
+
 // High level helper for loading Vulkan APIs that are tied to a VkInstance.
 //
 // Do not use this if your application uses more than one VkInstance.
@@ -3058,6 +3098,16 @@ drvk_context* drvkCreateContext(const VkApplicationInfo* pApplicationInfo, uint3
 void drvkDeleteContext(drvk_context* pVulkan);
 
 
+// Removes any unsupported layers from the given list.
+void drvkFilterUnsupportedLayers(uint32_t* pLayerCount, const char** ppLayers);
+
+// Removes any unsupported instance extensions from the given list.
+void drvkFilterUnsupportedInstanceExtensions(const char* pLayerName, uint32_t* pExtensionCount, const char** ppExtensions);
+
+// Removes any unsupported device extensions from the given list.
+void drvkFilterUnsupportedDeviceExtensions(VkPhysicalDevice physicalDevice, const char* pLayerName, uint32_t* pExtensionCount, const char** ppExtensions);
+
+
 // Retrieves the device count.
 uint32_t drvkGetDeviceCount(drvk_context* pVulkan);
 
@@ -3076,16 +3126,12 @@ drvk_queue* drvkFindFirstQueueWithFlags(drvk_context* pVulkan, uint32_t deviceIn
 // be the same.
 VkResult drvkFindQueuesWithFlags(drvk_context* pVulkan, uint32_t deviceIndex, VkQueueFlags flags, uint32_t queueCount, drvk_queue** pQueues);
 
-// A helper function for retrieving the index of the memory type that supports the given properties. This is used when allocating memory. Returns DRVK_INVALID_MEMORY_TYPE_INDEX
-// if a memory type with the given flags could not be found.
-uint32_t drvkGetMemoryTypeIndex(drvk_context* pVulkan, uint32_t deviceIndex, VkMemoryPropertyFlags propertyFlags);
-
 
 // Helper for allocating memory.
-VkResult drvkAllocateMemory(drvk_context* pVulkan, uint32_t deviceIndex, VkDeviceSize allocationSize, VkMemoryPropertyFlags propertyFlags, VkDeviceMemory* pMemory);
+//VkResult drvkAllocateMemory(drvk_context* pVulkan, uint32_t deviceIndex, VkDeviceSize allocationSize, VkMemoryPropertyFlags propertyFlags, VkDeviceMemory* pMemory);
 
 // Helper for allocating memory for the given image.
-VkResult drvkAllocateImageMemory(drvk_context* pVulkan, uint32_t deviceIndex, VkImage image, VkMemoryPropertyFlags propertyFlags, VkDeviceMemory* pMemory);
+//VkResult drvkAllocateImageMemory(drvk_context* pVulkan, uint32_t deviceIndex, VkImage image, VkMemoryPropertyFlags propertyFlags, VkDeviceMemory* pMemory);
 
 // Helper for calculating the size of a packed image of the given dimensions and format.
 VkDeviceSize drvkCalculateTightlyPackedImageSize(uint32_t width, uint32_t height, uint32_t depth, VkFormat format);
@@ -3093,6 +3139,25 @@ VkDeviceSize drvkCalculateTightlyPackedImageSize(uint32_t width, uint32_t height
 
 // Helper for beginning a command buffer.
 VkResult drvkBeginCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferUsageFlags flags, VkCommandBufferInheritanceInfo* pInheritanceInfo);
+
+// A helper function for retrieving the index of the memory type that supports the given properties. This is used when allocating memory. Returns DRVK_INVALID_MEMORY_TYPE_INDEX
+// if a memory type with the given flags could not be found.
+uint32_t drvkGetMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_t memoryTypeBits, VkMemoryPropertyFlags propertyFlags);
+
+
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+// Creates a Win32 surface.
+//
+// hInstance can be null, in which case it will be derived from hWnd.
+VkResult drvkCreateWin32Surface(VkInstance instance, HWND hWnd, HINSTANCE hInstance, VkSurfaceKHR* pSurface);
+#endif
+
+// Helper for creating a swapchain.
+VkResult drvkCreateSwapchain(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, uint32_t imageCount, VkSurfaceFormatKHR imageFormat, VkImageUsageFlags imageUsage, VkPresentModeKHR presentMode, VkSwapchainKHR oldSwapchain, VkSwapchainKHR* pSwapchain);
+
+// Helper for finding an appropriate image format for swapchains.
+VkSurfaceFormatKHR drvkChooseSurfaceImageFormat(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, uint32_t desiredFormatsCount, VkFormat* pDesiredFormats);
 
 
 
@@ -3581,6 +3646,253 @@ void drvkUninit()
 }
 
 
+VkImageCreateInfo drvkDefaultImageCreateInfo()
+{
+    VkImageCreateInfo result;
+    result.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    result.pNext = NULL;
+    result.flags = 0;
+    result.imageType = VK_IMAGE_TYPE_1D;
+    result.format = VK_FORMAT_UNDEFINED;
+    result.extent.width = 1;
+    result.extent.height = 1;
+    result.extent.depth = 1;
+    result.mipLevels = 1;
+    result.arrayLayers = 1;
+    result.samples = VK_SAMPLE_COUNT_1_BIT;
+    result.tiling = VK_IMAGE_TILING_OPTIMAL;
+    result.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    result.queueFamilyIndexCount = 0;
+    result.pQueueFamilyIndices = NULL;
+    result.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    return result;
+}
+
+VkImageCreateInfo drvkSimpleImageCreateInfo2D(VkFormat format, uint32_t width, uint32_t height, uint32_t mipLevels, VkImageUsageFlags usage)
+{
+    VkImageCreateInfo result = drvkDefaultImageCreateInfo();
+    result.imageType = VK_IMAGE_TYPE_2D;
+    result.format = format;
+    result.extent.width = width;
+    result.extent.height = height;
+    result.mipLevels = mipLevels;
+    result.usage = usage;
+    return result;
+}
+
+VkImageViewCreateInfo drvkDefaultImageViewCreateInfo()
+{
+    VkImageViewCreateInfo result;
+    memset(&result, 0, sizeof(result));
+    result.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    result.components = drvkDefaultComponentMapping();
+    return result;
+}
+
+VkFramebufferCreateInfo drvkDefaultFramebufferCreateInfo()
+{
+    VkFramebufferCreateInfo result;
+    memset(&result, 0, sizeof(result));
+    result.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    return result;
+}
+
+VkRenderPassCreateInfo drvkDefaultRenderPassCreateInfo()
+{
+    VkRenderPassCreateInfo result;
+    memset(&result, 0, sizeof(result));
+    result.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    return result;
+}
+
+VkSubmitInfo drvkDefaultSubmitInfo()
+{
+    VkSubmitInfo result;
+    memset(&result, 0, sizeof(result));
+    result.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    return result;
+}
+
+VkImageMemoryBarrier drvkDefaultImageMemoryBarrier()
+{
+    VkImageMemoryBarrier result;
+    memset(&result, 0, sizeof(result));
+    result.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    return result;
+}
+
+VkComponentMapping drvkDefaultComponentMapping()
+{
+    VkComponentMapping result;
+    result.r = VK_COMPONENT_SWIZZLE_R;
+    result.g = VK_COMPONENT_SWIZZLE_G;
+    result.b = VK_COMPONENT_SWIZZLE_B;
+    result.a = VK_COMPONENT_SWIZZLE_A;
+    return result;
+}
+
+VkImageSubresourceRange drvkImageSubresourceRange(VkImageAspectFlags aspectMask, uint32_t baseMipLevel, uint32_t levelCount, uint32_t baseArrayLayer, uint32_t layerCount)
+{
+    VkImageSubresourceRange result;
+    result.aspectMask = aspectMask;
+    result.baseMipLevel = baseMipLevel;
+    result.levelCount = levelCount;
+    result.baseArrayLayer = baseArrayLayer;
+    result.layerCount = layerCount;
+    return result;
+}
+
+VkExtent3D drvkExtent3D(uint32_t width, uint32_t height, uint32_t depth)
+{
+    VkExtent3D result;
+    result.width = width;
+    result.height = height;
+    result.depth = depth;
+    return result;
+}
+
+VkRect2D drvkRect2D(int32_t x, int32_t y, uint32_t width, uint32_t height)
+{
+    VkRect2D result;
+    result.offset.x = x;
+    result.offset.y = y;
+    result.extent.width = width;
+    result.extent.height = height;
+    return result;
+}
+
+VkClearColorValue drvkClearColorValue4f(float r, float g, float b, float a)
+{
+    VkClearColorValue result;
+    result.float32[0] = r;
+    result.float32[1] = g;
+    result.float32[2] = b;
+    result.float32[3] = a;
+    return result;
+}
+
+VkClearColorValue drvkClearColorValue4i(int32_t r, int32_t g, int32_t b, int32_t a)
+{
+    VkClearColorValue result;
+    result.int32[0] = r;
+    result.int32[1] = g;
+    result.int32[2] = b;
+    result.int32[3] = a;
+    return result;
+}
+
+VkClearColorValue drvkClearColorValue4ui(uint32_t r, uint32_t g, uint32_t b, uint32_t a)
+{
+    VkClearColorValue result;
+    result.uint32[0] = r;
+    result.uint32[1] = g;
+    result.uint32[2] = b;
+    result.uint32[3] = a;
+    return result;
+}
+
+VkClearValue drvkClearValueColor4f(float r, float g, float b, float a)
+{
+    VkClearValue result;
+    result.color.float32[0] = r;
+    result.color.float32[1] = g;
+    result.color.float32[2] = b;
+    result.color.float32[3] = a;
+    return result;
+}
+
+VkClearValue drvkClearValueColor4i(int32_t r, int32_t g, int32_t b, int32_t a)
+{
+    VkClearValue result;
+    result.color.int32[0] = r;
+    result.color.int32[1] = g;
+    result.color.int32[2] = b;
+    result.color.int32[3] = a;
+    return result;
+}
+
+VkClearValue drvkClearValueColor4ui(uint32_t r, uint32_t g, uint32_t b, uint32_t a)
+{
+    VkClearValue result;
+    result.color.uint32[0] = r;
+    result.color.uint32[1] = g;
+    result.color.uint32[2] = b;
+    result.color.uint32[3] = a;
+    return result;
+}
+
+VkClearValue drvkClearValueDepthStencil(float depth, uint32_t stencil)
+{
+    VkClearValue result;
+    result.depthStencil.depth = depth;
+    result.depthStencil.stencil = stencil;
+    return result;
+}
+
+VkCommandBufferAllocateInfo drvkCommandBufferAllocateInfo(VkCommandPool commandPool, VkCommandBufferLevel level, uint32_t commandBufferCount)
+{
+    VkCommandBufferAllocateInfo result;
+    result.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    result.pNext = NULL;
+    result.commandPool = commandPool;
+    result.level = level;
+    result.commandBufferCount = commandBufferCount;
+    return result;
+}
+
+VkCommandBufferBeginInfo drvkCommandBufferBeginInfo(VkCommandBufferUsageFlags flags, VkCommandBufferInheritanceInfo* pInheritanceInfo)
+{
+    VkCommandBufferBeginInfo result;
+    result.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    result.pNext = NULL;
+    result.flags = flags;
+    result.pInheritanceInfo = pInheritanceInfo;
+    return result;
+}
+
+
+VkResult drvkAllocateAndBindImageMemory(VkPhysicalDevice physicalDevice, VkDevice device, VkImage image, VkMemoryPropertyFlags memoryPropertyFlags, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory)
+{
+    VkMemoryRequirements memreqs;
+    vkGetImageMemoryRequirements(device, image, &memreqs);
+
+    VkMemoryAllocateInfo allocInfo;
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.pNext = NULL;
+    allocInfo.allocationSize = memreqs.size;
+    allocInfo.memoryTypeIndex = drvkGetMemoryTypeIndex(physicalDevice, memreqs.memoryTypeBits, memoryPropertyFlags);
+    VkResult result = vkAllocateMemory(device, &allocInfo, pAllocator, pMemory);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    return vkBindImageMemory(device, image, *pMemory, 0);
+}
+
+VkResult drvkCreateSimpleImageView(VkDevice device, VkImage image, VkImageViewType viewType, VkFormat format, VkImageSubresourceRange subresourceRange, const VkAllocationCallbacks* pAllocator, VkImageView* pView)
+{
+    VkImageViewCreateInfo viewInfo = drvkDefaultImageViewCreateInfo();
+    viewInfo.image = image;
+    viewInfo.viewType = viewType;
+    viewInfo.format = format;
+    viewInfo.subresourceRange = subresourceRange;
+    return vkCreateImageView(device, &viewInfo, pAllocator, pView);
+}
+
+VkResult drvkAllocateCommandBuffers(VkDevice device, VkCommandPool commandPool, VkCommandBufferLevel level, uint32_t commandBufferCount, VkCommandBuffer* pCommandBuffers)
+{
+    VkCommandBufferAllocateInfo allocInfo = drvkCommandBufferAllocateInfo(commandPool, level, commandBufferCount);
+    return vkAllocateCommandBuffers(device, &allocInfo, pCommandBuffers);
+}
+
+VkResult drvkBeginCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferUsageFlags flags, VkCommandBufferInheritanceInfo* pInheritanceInfo)
+{
+    VkCommandBufferBeginInfo beginInfo = drvkCommandBufferBeginInfo(flags, pInheritanceInfo);
+    return vkBeginCommandBuffer(commandBuffer, &beginInfo);
+}
+
+
+
 VkBool32 drvkInitInstanceAPIs(VkInstance instance)
 {
     if (instance == NULL || vkGetInstanceProcAddr == NULL) {
@@ -3631,6 +3943,98 @@ VkInstance drvkInitInstance(const VkApplicationInfo* pApplicationInfo, uint32_t 
 }
 
 
+void drvkFilterUnsupportedLayers(uint32_t* pLayerCount, const char** ppLayers)
+{
+    if (pLayerCount == NULL || ppLayers == NULL) return;
+
+    uint32_t supportedLayerCount;
+    VkLayerProperties supportedLayers[64];
+    vkEnumerateInstanceLayerProperties(&supportedLayerCount, supportedLayers);
+
+    for (uint32_t iDesiredLayer = 0; iDesiredLayer < *pLayerCount; /* DO NOTHING */) {
+        bool isSupported = false;
+        for (uint32_t iSupportedLayer = 0; iSupportedLayer < supportedLayerCount; ++iSupportedLayer) {
+            if (strcmp(supportedLayers[iSupportedLayer].layerName, ppLayers[iDesiredLayer]) == 0) {
+                isSupported = true;
+                break;
+            }
+        }
+
+        if (!isSupported) {
+            for (uint32_t j = iDesiredLayer; j < *pLayerCount-1; ++j) {
+                ppLayers[j] = ppLayers[j+1];
+            }
+
+            *pLayerCount -= 1;
+        } else {
+            iDesiredLayer += 1;
+        }
+    }
+}
+
+void drvkFilterUnsupportedInstanceExtensions(const char* pLayerName, uint32_t* pExtensionCount, const char** ppExtensions)
+{
+    if (pExtensionCount == NULL || ppExtensions == NULL) {
+        return;
+    }
+
+    uint32_t supportedExtensionCount;
+    VkExtensionProperties supportedExtensions[256];
+    vkEnumerateInstanceExtensionProperties(pLayerName, &supportedExtensionCount, supportedExtensions);
+
+    for (uint32_t iDesiredExtension = 0; iDesiredExtension < *pExtensionCount; /* DO NOTHING */) {
+        bool isSupported = false;
+        for (uint32_t iSupportedExtension = 0; iSupportedExtension < supportedExtensionCount; ++iSupportedExtension) {
+            if (strcmp(supportedExtensions[iSupportedExtension].extensionName, ppExtensions[iDesiredExtension]) == 0) {
+                isSupported = true;
+                break;
+            }
+        }
+
+        if (!isSupported) {
+            for (uint32_t j = iDesiredExtension; j < *pExtensionCount-1; ++j) {
+                ppExtensions[j] = ppExtensions[j+1];
+            }
+
+            *pExtensionCount -= 1;
+        } else {
+            iDesiredExtension += 1;
+        }
+    }
+}
+
+void drvkFilterUnsupportedDeviceExtensions(VkPhysicalDevice physicalDevice, const char* pLayerName, uint32_t* pExtensionCount, const char** ppExtensions)
+{
+    if (pExtensionCount == NULL || ppExtensions == NULL) {
+        return;
+    }
+
+    uint32_t supportedExtensionCount;
+    VkExtensionProperties supportedExtensions[256];
+    vkEnumerateDeviceExtensionProperties(physicalDevice, pLayerName, &supportedExtensionCount, supportedExtensions);
+
+    for (uint32_t iDesiredExtension = 0; iDesiredExtension < *pExtensionCount; /* DO NOTHING */) {
+        bool isSupported = false;
+        for (uint32_t iSupportedExtension = 0; iSupportedExtension < supportedExtensionCount; ++iSupportedExtension) {
+            if (strcmp(supportedExtensions[iSupportedExtension].extensionName, ppExtensions[iDesiredExtension]) == 0) {
+                isSupported = true;
+                break;
+            }
+        }
+
+        if (!isSupported) {
+            for (uint32_t j = iDesiredExtension; j < *pExtensionCount-1; ++j) {
+                ppExtensions[j] = ppExtensions[j+1];
+            }
+
+            *pExtensionCount -= 1;
+        } else {
+            iDesiredExtension += 1;
+        }
+    }
+}
+
+
 VkResult drvkCreateSemaphore(VkDevice device, VkSemaphore* pSemaphore)
 {
     VkSemaphoreCreateInfo semInfo;
@@ -3673,7 +4077,7 @@ drvk_context* drvkCreateContext(const VkApplicationInfo* pApplicationInfo, uint3
         return NULL;
     }
 
-    pPhysicalDevices = malloc(sizeof(VkPhysicalDevice) * deviceCount);
+    pPhysicalDevices = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * deviceCount);
     if (pPhysicalDevices == NULL) {
         goto on_error;
     }
@@ -3683,14 +4087,14 @@ drvk_context* drvkCreateContext(const VkApplicationInfo* pApplicationInfo, uint3
     }
 
 
-    pDevices = malloc(sizeof(*pDevices) * deviceCount);
+    pDevices = (drvk_device*)malloc(sizeof(*pDevices) * deviceCount);
     if (pDevices == NULL) {
         goto on_error;
     }
 
 
     // Logical devices. This abstraction creates one logical device per physical device.
-    pLogicalDevices = malloc(sizeof(VkDevice) * deviceCount);
+    pLogicalDevices = (VkDevice*)malloc(sizeof(VkDevice) * deviceCount);
     if (pLogicalDevices == NULL) {
         goto on_error;
     }
@@ -3705,7 +4109,7 @@ drvk_context* drvkCreateContext(const VkApplicationInfo* pApplicationInfo, uint3
         uint32_t queueFamilyCount;
         vkGetPhysicalDeviceQueueFamilyProperties(pPhysicalDevices[iDevice], &queueFamilyCount, NULL);
 
-        pQueueFamilyProps = malloc(sizeof(VkQueueFamilyProperties) * queueFamilyCount);
+        pQueueFamilyProps = (VkQueueFamilyProperties*)malloc(sizeof(VkQueueFamilyProperties) * queueFamilyCount);
         if (pQueueFamilyProps == NULL) {
             goto on_create_device_error;
         }
@@ -3713,12 +4117,12 @@ drvk_context* drvkCreateContext(const VkApplicationInfo* pApplicationInfo, uint3
         vkGetPhysicalDeviceQueueFamilyProperties(pPhysicalDevices[iDevice], &queueFamilyCount, pQueueFamilyProps);
 
 
-        pQueuePriorities = malloc(sizeof(float) * queueFamilyCount);
+        pQueuePriorities = (float*)malloc(sizeof(float) * queueFamilyCount);
         if (pQueuePriorities == NULL) {
             goto on_create_device_error;
         }
 
-        pDeviceQueueInfo = malloc(sizeof(VkDeviceQueueCreateInfo) * queueFamilyCount);
+        pDeviceQueueInfo = (VkDeviceQueueCreateInfo*)malloc(sizeof(VkDeviceQueueCreateInfo) * queueFamilyCount);
         if (pDeviceQueueInfo == NULL) {
             goto on_create_device_error;
         }
@@ -3759,13 +4163,13 @@ drvk_context* drvkCreateContext(const VkApplicationInfo* pApplicationInfo, uint3
         }
 
         pDevices[iDevice].queueCount = queueCount;
-        pDevices[iDevice].pQueues = malloc(sizeof(drvk_queue) * queueCount);
+        pDevices[iDevice].pQueues = (drvk_queue*)malloc(sizeof(drvk_queue) * queueCount);
         if (pDevices[iDevice].pQueues == NULL) {
             goto on_create_device_error;
         }
 
         pDevices[iDevice].commandPoolCount = queueFamilyCount;
-        pDevices[iDevice].pCommandPools = malloc(sizeof(VkCommandPool) * queueFamilyCount);
+        pDevices[iDevice].pCommandPools = (VkCommandPool*)malloc(sizeof(VkCommandPool) * queueFamilyCount);
 
 
         uint32_t iRunningQueue = 0;
@@ -3818,7 +4222,7 @@ drvk_context* drvkCreateContext(const VkApplicationInfo* pApplicationInfo, uint3
 
 
     // At this point we should have our devices and queues all ready to go which means we can now create our main context object and return.
-    drvk_context* pContext = malloc(sizeof(*pContext));
+    drvk_context* pContext = (drvk_context*)malloc(sizeof(*pContext));
     if (pContext == NULL) {
         goto on_error;
     }
@@ -3904,18 +4308,8 @@ VkResult drvkFindQueuesWithFlags(drvk_context* pVulkan, uint32_t deviceIndex, Vk
     return VK_SUCCESS;
 }
 
-uint32_t drvkGetMemoryTypeIndex(drvk_context* pVulkan, uint32_t deviceIndex, VkMemoryPropertyFlags propertyFlags)
-{
-    for (uint32_t i = 0; i < pVulkan->pDevices[deviceIndex].memoryProps.memoryTypeCount; ++i) {
-        if ((pVulkan->pDevices[deviceIndex].memoryProps.memoryTypes[i].propertyFlags & propertyFlags) == propertyFlags) {
-            return i;
-        }
-    }
 
-    return DRVK_INVALID_MEMORY_TYPE_INDEX;
-}
-
-
+#if 0
 VkResult drvkAllocateMemory(drvk_context* pVulkan, uint32_t deviceIndex, VkDeviceSize allocationSize, VkMemoryPropertyFlags propertyFlags, VkDeviceMemory* pMemory)
 {
     VkMemoryAllocateInfo memoryAllocInfo;
@@ -3937,6 +4331,7 @@ VkResult drvkAllocateImageMemory(drvk_context* pVulkan, uint32_t deviceIndex, Vk
 
     return drvkAllocateMemory(pVulkan, deviceIndex, imageMemoryReqs.size, propertyFlags, pMemory);
 }
+#endif
 
 
 VkDeviceSize drvkCalculateTightlyPackedImageSize(uint32_t width, uint32_t height, uint32_t depth, VkFormat format)
@@ -4140,14 +4535,91 @@ VkDeviceSize drvkCalculateTightlyPackedImageSize(uint32_t width, uint32_t height
     return 0;
 }
 
-VkResult drvkBeginCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferUsageFlags flags, VkCommandBufferInheritanceInfo* pInheritanceInfo)
+uint32_t drvkGetMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_t memoryTypeBits, VkMemoryPropertyFlags propertyFlags)
 {
-    VkCommandBufferBeginInfo beginInfo;
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.pNext = NULL;
-    beginInfo.flags = flags;
-    beginInfo.pInheritanceInfo = pInheritanceInfo;
-    return vkBeginCommandBuffer(commandBuffer, &beginInfo);
+    VkPhysicalDeviceMemoryProperties memoryProps;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProps);
+
+    for (uint32_t i = 0; i < memoryProps.memoryTypeCount; ++i) {
+        if ((memoryTypeBits & (1 << i)) && (memoryProps.memoryTypes[i].propertyFlags & propertyFlags) == propertyFlags) {
+            return i;
+        }
+    }
+
+    return DRVK_INVALID_MEMORY_TYPE_INDEX;
+}
+
+
+
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+VkResult drvkCreateWin32Surface(VkInstance instance, HWND hWnd, HINSTANCE hWin32Instance, VkSurfaceKHR* pSurface)
+{
+    if (hWin32Instance == NULL) hWin32Instance = (HINSTANCE)GetWindowLong(hWnd, GWL_HINSTANCE);
+
+    VkWin32SurfaceCreateInfoKHR surfaceInfo;
+    surfaceInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    surfaceInfo.pNext = NULL;
+    surfaceInfo.flags = 0;
+    surfaceInfo.hinstance = hWin32Instance;
+    surfaceInfo.hwnd = hWnd;
+    return vkCreateWin32SurfaceKHR(instance, &surfaceInfo, NULL, pSurface);
+}
+#endif
+
+VkResult drvkCreateSwapchain(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, uint32_t imageCount, VkSurfaceFormatKHR imageFormat, VkImageUsageFlags imageUsage, VkPresentModeKHR presentMode, VkSwapchainKHR oldSwapchain, VkSwapchainKHR* pSwapchain)
+{
+    VkSurfaceCapabilitiesKHR surfaceCaps;
+    VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCaps);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    VkSwapchainCreateInfoKHR swapchainInfo;
+    swapchainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchainInfo.pNext = NULL;
+    swapchainInfo.flags = 0;
+    swapchainInfo.surface = surface;
+    swapchainInfo.minImageCount = imageCount;
+    swapchainInfo.imageFormat = imageFormat.format;
+    swapchainInfo.imageColorSpace = imageFormat.colorSpace;
+    swapchainInfo.imageExtent = surfaceCaps.currentExtent;
+    swapchainInfo.imageArrayLayers = 1;
+    swapchainInfo.imageUsage = imageUsage;
+    swapchainInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swapchainInfo.queueFamilyIndexCount = 0;
+    swapchainInfo.pQueueFamilyIndices = NULL;
+    swapchainInfo.preTransform = surfaceCaps.currentTransform;
+    swapchainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchainInfo.presentMode = presentMode;
+    swapchainInfo.clipped = VK_TRUE;
+    swapchainInfo.oldSwapchain = oldSwapchain;
+    return vkCreateSwapchainKHR(device, &swapchainInfo, NULL, pSwapchain);
+}
+
+VkSurfaceFormatKHR drvkChooseSurfaceImageFormat(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, uint32_t desiredFormatsCount, VkFormat* pDesiredFormats)
+{
+    VkSurfaceFormatKHR pSupportedFormats[VK_FORMAT_RANGE_SIZE];
+    uint32_t supportedFormatsCount = sizeof(pSupportedFormats) / sizeof(pSupportedFormats[0]);
+    VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &supportedFormatsCount, pSupportedFormats);
+    if (result != VK_SUCCESS) {
+        VkSurfaceFormatKHR format;
+        format.format = VK_FORMAT_UNDEFINED;
+        format.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+        return format;
+    }
+
+    uint32_t iFormat = (uint32_t)-1;
+    for (uint32_t iDesiredFormat = 0; iDesiredFormat < desiredFormatsCount; ++iDesiredFormat) {
+        for (uint32_t iSupportedFormat = 0; iSupportedFormat < supportedFormatsCount; ++iSupportedFormat) {
+            if (pSupportedFormats[iSupportedFormat].format == pDesiredFormats[iDesiredFormat]) {
+                iFormat = iSupportedFormat;
+                break;
+            }
+        }
+    }
+
+    return pSupportedFormats[iFormat];
 }
 
 #endif
