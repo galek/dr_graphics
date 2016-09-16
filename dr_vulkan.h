@@ -2989,6 +2989,9 @@ VkRenderPassCreateInfo drvkDefaultRenderPassCreateInfo();
 VkSubmitInfo drvkDefaultSubmitInfo();
 VkImageMemoryBarrier drvkDefaultImageMemoryBarrier();
 VkComponentMapping drvkDefaultComponentMapping();
+VkRenderPassBeginInfo drvkDefaultrenderPassBeginInfo();
+VkGraphicsPipelineCreateInfo drvkDefaultGraphicsPipelineCreateInfo();
+VkWriteDescriptorSet drvkDefaultWriteDescriptorSet();
 VkImageSubresourceRange drvkImageSubresourceRange(VkImageAspectFlags aspectMask, uint32_t baseMipLevel, uint32_t levelCount, uint32_t baseArrayLayer, uint32_t layerCount);
 VkExtent3D drvkExtent3D(uint32_t width, uint32_t height, uint32_t depth);
 VkRect2D drvkRect2D(int32_t x, int32_t y, uint32_t width, uint32_t height);
@@ -2999,8 +3002,11 @@ VkClearValue drvkClearValueColor4f(float r, float g, float b, float a);
 VkClearValue drvkClearValueColor4i(int32_t r, int32_t g, int32_t b, int32_t a);
 VkClearValue drvkClearValueColor4ui(uint32_t r, uint32_t g, uint32_t b, uint32_t a);
 VkClearValue drvkClearValueDepthStencil(float depth, uint32_t stencil);
+VkViewport drvkViewport(float x, float y, float width, float height, float minDepth, float maxDepth);
 VkCommandBufferAllocateInfo drvkCommandBufferAllocateInfo(VkCommandPool commandPool, VkCommandBufferLevel level, uint32_t commandBufferCount);
 VkCommandBufferBeginInfo drvkCommandBufferBeginInfo(VkCommandBufferUsageFlags flags, VkCommandBufferInheritanceInfo* pInheritanceInfo);
+VkShaderModuleCreateInfo drvkShaderModuleCreateInfo(size_t codeSize, const uint32_t* pCode);
+VkPipelineShaderStageCreateInfo drvkPipelineShaderStageCreateInfo(VkShaderStageFlagBits stage, VkShaderModule module, const char* pName, VkSpecializationInfo* pSpecializationInfo);
 
 
 //// Misc High-Level Helpers ////
@@ -3010,12 +3016,16 @@ VkCommandBufferBeginInfo drvkCommandBufferBeginInfo(VkCommandBufferUsageFlags fl
 // Note that this is not the most efficient way of binding memory for an image, but it should work well for prototyping and whatnot. Doing custom
 // memory management may be a better alternative.
 VkResult drvkAllocateAndBindImageMemory(VkPhysicalDevice physicalDevice, VkDevice device, VkImage image, VkMemoryPropertyFlags memoryPropertyFlags, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory);
+VkResult drvkAllocateAndBindBufferMemory(VkPhysicalDevice physicalDevice, VkDevice device, VkBuffer buffer, VkMemoryPropertyFlags memoryPropertyFlags, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory);
 
 // Helper for creating an image view with common properties.
 VkResult drvkCreateSimpleImageView(VkDevice device, VkImage image, VkImageViewType viewType, VkFormat format, VkImageSubresourceRange subresourceRange, const VkAllocationCallbacks* pAllocator, VkImageView* pView);
 
 // Helper for allocating command buffers.
 VkResult drvkAllocateCommandBuffers(VkDevice device, VkCommandPool commandPool, VkCommandBufferLevel level, uint32_t commandBufferCount, VkCommandBuffer* pCommandBuffers);
+
+// Helper for creating a shader module.
+VkResult drvkCreateShaderModule(VkDevice device, size_t codeSize, const uint32_t* pCode, const VkAllocationCallbacks* pAllocator, VkShaderModule* pShaderModule);
 
 
 
@@ -3721,6 +3731,30 @@ VkImageMemoryBarrier drvkDefaultImageMemoryBarrier()
     return result;
 }
 
+VkRenderPassBeginInfo drvkDefaultrenderPassBeginInfo()
+{
+    VkRenderPassBeginInfo result;
+    memset(&result, 0, sizeof(result));
+    result.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    return result;
+}
+
+VkGraphicsPipelineCreateInfo drvkDefaultGraphicsPipelineCreateInfo()
+{
+    VkGraphicsPipelineCreateInfo result;
+    memset(&result, 0, sizeof(result));
+    result.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    return result;
+}
+
+VkWriteDescriptorSet drvkDefaultWriteDescriptorSet()
+{
+    VkWriteDescriptorSet result;
+    memset(&result, 0, sizeof(result));
+    result.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    return result;
+}
+
 VkComponentMapping drvkDefaultComponentMapping()
 {
     VkComponentMapping result;
@@ -3829,6 +3863,18 @@ VkClearValue drvkClearValueDepthStencil(float depth, uint32_t stencil)
     return result;
 }
 
+VkViewport drvkViewport(float x, float y, float width, float height, float minDepth, float maxDepth)
+{
+    VkViewport result;
+    result.x = x;
+    result.y = y;
+    result.width = width;
+    result.height = height;
+    result.minDepth = minDepth;
+    result.maxDepth = maxDepth;
+    return result;
+}
+
 VkCommandBufferAllocateInfo drvkCommandBufferAllocateInfo(VkCommandPool commandPool, VkCommandBufferLevel level, uint32_t commandBufferCount)
 {
     VkCommandBufferAllocateInfo result;
@@ -3847,6 +3893,30 @@ VkCommandBufferBeginInfo drvkCommandBufferBeginInfo(VkCommandBufferUsageFlags fl
     result.pNext = NULL;
     result.flags = flags;
     result.pInheritanceInfo = pInheritanceInfo;
+    return result;
+}
+
+VkShaderModuleCreateInfo drvkShaderModuleCreateInfo(size_t codeSize, const uint32_t* pCode)
+{
+    VkShaderModuleCreateInfo result;
+    result.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    result.pNext = NULL;
+    result.flags = 0;
+    result.codeSize = codeSize;
+    result.pCode = pCode;
+    return result;
+}
+
+VkPipelineShaderStageCreateInfo drvkPipelineShaderStageCreateInfo(VkShaderStageFlagBits stage, VkShaderModule module, const char* pName, VkSpecializationInfo* pSpecializationInfo)
+{
+    VkPipelineShaderStageCreateInfo result;
+    result.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    result.pNext = NULL;
+    result.flags = 0;
+    result.stage = stage;
+    result.module = module;
+    result.pName = pName;
+    result.pSpecializationInfo = pSpecializationInfo;
     return result;
 }
 
@@ -3869,6 +3939,24 @@ VkResult drvkAllocateAndBindImageMemory(VkPhysicalDevice physicalDevice, VkDevic
     return vkBindImageMemory(device, image, *pMemory, 0);
 }
 
+VkResult drvkAllocateAndBindBufferMemory(VkPhysicalDevice physicalDevice, VkDevice device, VkBuffer buffer, VkMemoryPropertyFlags memoryPropertyFlags, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory)
+{
+    VkMemoryRequirements memreqs;
+    vkGetBufferMemoryRequirements(device, buffer, &memreqs);
+
+    VkMemoryAllocateInfo allocInfo;
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.pNext = NULL;
+    allocInfo.allocationSize = memreqs.size;
+    allocInfo.memoryTypeIndex = drvkGetMemoryTypeIndex(physicalDevice, memreqs.memoryTypeBits, memoryPropertyFlags);
+    VkResult result = vkAllocateMemory(device, &allocInfo, pAllocator, pMemory);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    return vkBindBufferMemory(device, buffer, *pMemory, 0);
+}
+
 VkResult drvkCreateSimpleImageView(VkDevice device, VkImage image, VkImageViewType viewType, VkFormat format, VkImageSubresourceRange subresourceRange, const VkAllocationCallbacks* pAllocator, VkImageView* pView)
 {
     VkImageViewCreateInfo viewInfo = drvkDefaultImageViewCreateInfo();
@@ -3889,6 +3977,12 @@ VkResult drvkBeginCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferUs
 {
     VkCommandBufferBeginInfo beginInfo = drvkCommandBufferBeginInfo(flags, pInheritanceInfo);
     return vkBeginCommandBuffer(commandBuffer, &beginInfo);
+}
+
+VkResult drvkCreateShaderModule(VkDevice device, size_t codeSize, const uint32_t* pCode, const VkAllocationCallbacks* pAllocator, VkShaderModule* pShaderModule)
+{
+    VkShaderModuleCreateInfo info = drvkShaderModuleCreateInfo(codeSize, pCode);
+    return vkCreateShaderModule(device, &info, pAllocator, pShaderModule);
 }
 
 
