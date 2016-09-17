@@ -4041,8 +4041,8 @@ void drvkFilterUnsupportedLayers(uint32_t* pLayerCount, const char** ppLayers)
 {
     if (pLayerCount == NULL || ppLayers == NULL) return;
 
-    uint32_t supportedLayerCount;
     VkLayerProperties supportedLayers[64];
+    uint32_t supportedLayerCount = sizeof(supportedLayers) / sizeof(supportedLayers[0]);
     vkEnumerateInstanceLayerProperties(&supportedLayerCount, supportedLayers);
 
     for (uint32_t iDesiredLayer = 0; iDesiredLayer < *pLayerCount; /* DO NOTHING */) {
@@ -4072,8 +4072,8 @@ void drvkFilterUnsupportedInstanceExtensions(const char* pLayerName, uint32_t* p
         return;
     }
 
-    uint32_t supportedExtensionCount;
     VkExtensionProperties supportedExtensions[256];
+    uint32_t supportedExtensionCount = sizeof(supportedExtensions) / sizeof(supportedExtensions[0]);
     vkEnumerateInstanceExtensionProperties(pLayerName, &supportedExtensionCount, supportedExtensions);
 
     for (uint32_t iDesiredExtension = 0; iDesiredExtension < *pExtensionCount; /* DO NOTHING */) {
@@ -4103,8 +4103,8 @@ void drvkFilterUnsupportedDeviceExtensions(VkPhysicalDevice physicalDevice, cons
         return;
     }
 
-    uint32_t supportedExtensionCount;
     VkExtensionProperties supportedExtensions[256];
+    uint32_t supportedExtensionCount = sizeof(supportedExtensions) / sizeof(supportedExtensions[0]);
     vkEnumerateDeviceExtensionProperties(physicalDevice, pLayerName, &supportedExtensionCount, supportedExtensions);
 
     for (uint32_t iDesiredExtension = 0; iDesiredExtension < *pExtensionCount; /* DO NOTHING */) {
@@ -4649,7 +4649,7 @@ uint32_t drvkGetMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_t memory
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 VkResult drvkCreateWin32Surface(VkInstance instance, HWND hWnd, HINSTANCE hWin32Instance, VkSurfaceKHR* pSurface)
 {
-    if (hWin32Instance == NULL) hWin32Instance = (HINSTANCE)GetWindowLong(hWnd, GWL_HINSTANCE);
+    if (hWin32Instance == NULL) hWin32Instance = (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE);
 
     VkWin32SurfaceCreateInfoKHR surfaceInfo;
     surfaceInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
