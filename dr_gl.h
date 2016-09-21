@@ -429,7 +429,7 @@ typedef void         (APIENTRYP PFNGLXDESTROYCONTEXTPROC)       (Display *dpy, G
 typedef Bool         (APIENTRYP PFNGLXMAKECURRENTPROC)          (Display *dpy, GLXDrawable drawable, GLXContext ctx);
 typedef void         (APIENTRYP PFNGLXSWAPBUFFERSPROC)          (Display *dpy, GLXDrawable drawable);
 typedef GLXContext   (APIENTRYP PFNGLXGETCURRENTCONTEXTPROC)    (void);
-typedef const char*  (APIENTRYP PFNGLXQUERYEXTENSIONSTRINGPROC) (Display *dpy, int screen);
+typedef const char*  (APIENTRYP PFNGLXQUERYEXTENSIONSSTRINGPROC)(Display *dpy, int screen);
 
 // A note on these declarations... GL/glext.h guards against GL_VERSION_1_3 to avoid duplicate
 // declarations (quite rightly). However, in their wisdom, the writers of GL/gl.h (the Mesa3D
@@ -516,14 +516,14 @@ typedef struct
 #ifdef DRGL_X11
     // A handle to the OpenGL SO.
     void* pOpenGLSO;
-    
+
     // The display.
     Display* pDisplay;
-    
+
     // Whether or not the context owns the display. This is used to control whether or not the
     // shutdown routine should close the display.
     bool ownsDisplay;
-    
+
     // The window that was used to create the context.
     Window dummyWindow;
 
@@ -545,7 +545,7 @@ typedef struct
     PFNGLXMAKECURRENTPROC MakeCurrent;
     PFNGLXSWAPBUFFERSPROC SwapBuffers;
     PFNGLXGETCURRENTCONTEXTPROC GetCurrentContext;
-    PFNGLXQUERYEXTENSIONSTRINGPROC QueryExtensionString;
+    PFNGLXQUERYEXTENSIONSSTRINGPROC QueryExtensionsString;
     PFNGLXGETCURRENTDISPLAYPROC GetCurrentDisplay;
     PFNGLXCHOOSEFBCONFIGPROC ChooseFBConfig;
     PFNGLXGETVISUALFROMFBCONFIGPROC GetVisualFromFBConfig;
@@ -1270,12 +1270,12 @@ void* drgl__get_proc_address(drgl* pGL, const char* name)
 {
     assert(pGL != NULL);
     assert(pGL->GetProcAddress != NULL);
-    
+
     void* func = NULL;
     if (pGL->GetProcAddress != NULL) {
         func = (void*)pGL->GetProcAddress((const GLubyte*)name);
     }
-    
+
     if (func == NULL) {
         func = dlsym(pGL->pOpenGLSO, name);
     }
@@ -1286,7 +1286,7 @@ void* drgl__get_proc_address(drgl* pGL, const char* name)
 Window drgl__create_dummy_x11_window(drgl* pGL)
 {
     assert(pGL != NULL);
-    
+
     XSetWindowAttributes wa;
     wa.colormap = pGL->colormap;
     wa.border_pixel = 0;
@@ -1381,7 +1381,7 @@ bool drglInit(drgl* pGL)
         None,                   // Reserved for GLX_DOUBLEBUFFER
         None, None
     };
-    
+
     // TODO: Add support for single buffered context's.
     //if (!isSingleBuffered) {
         attribs[13] = GLX_DOUBLEBUFFER;
@@ -1391,33 +1391,33 @@ bool drglInit(drgl* pGL)
     if (pGL->pOpenGLSO == NULL) {
         goto on_error;
     }
-    
+
     pGL->ChooseVisual          = (PFNGLXCHOOSEVISUALPROC         )dlsym(pGL->pOpenGLSO, "glXChooseVisual");
     pGL->CreateContext         = (PFNGLXCREATECONTEXTPROC        )dlsym(pGL->pOpenGLSO, "glXCreateContext");
     pGL->DestroyContext        = (PFNGLXDESTROYCONTEXTPROC       )dlsym(pGL->pOpenGLSO, "glXDestroyContext");
     pGL->MakeCurrent           = (PFNGLXMAKECURRENTPROC          )dlsym(pGL->pOpenGLSO, "glXMakeCurrent");
     pGL->SwapBuffers           = (PFNGLXSWAPBUFFERSPROC          )dlsym(pGL->pOpenGLSO, "glXSwapBuffers");
     pGL->GetCurrentContext     = (PFNGLXGETCURRENTCONTEXTPROC    )dlsym(pGL->pOpenGLSO, "glXGetCurrentContext");
-    pGL->QueryExtensionString  = (PFNGLXQUERYEXTENSIONSTRINGPROC )dlsym(pGL->pOpenGLSO, "glXQueryExtensionString");
+    pGL->QueryExtensionsString = (PFNGLXQUERYEXTENSIONSSTRINGPROC)dlsym(pGL->pOpenGLSO, "glXQueryExtensionsString");
     pGL->GetCurrentDisplay     = (PFNGLXGETCURRENTDISPLAYPROC    )dlsym(pGL->pOpenGLSO, "glXGetCurrentDisplay");
     pGL->ChooseFBConfig        = (PFNGLXCHOOSEFBCONFIGPROC       )dlsym(pGL->pOpenGLSO, "glXChooseFBConfig");
     pGL->GetVisualFromFBConfig = (PFNGLXGETVISUALFROMFBCONFIGPROC)dlsym(pGL->pOpenGLSO, "glXGetVisualFromFBConfig");
     pGL->GetProcAddress        = (PFNGLXGETPROCADDRESSPROC       )dlsym(pGL->pOpenGLSO, "glXGetProcAddress");
-    
+
     if (pGL->ChooseVisual          == NULL ||
         pGL->CreateContext         == NULL ||
         pGL->DestroyContext        == NULL ||
         pGL->MakeCurrent           == NULL ||
         pGL->SwapBuffers           == NULL ||
         pGL->GetCurrentContext     == NULL ||
-        pGL->QueryExtensionString  == NULL ||
+        pGL->QueryExtensionsString == NULL ||
         pGL->GetCurrentDisplay     == NULL ||
         pGL->ChooseFBConfig        == NULL ||
         pGL->GetVisualFromFBConfig == NULL ||
         pGL->GetProcAddress        == NULL) {
         goto on_error;
     }
-    
+
     // TODO: Add support for an application-defined display.
     pGL->ownsDisplay = true;
     pGL->pDisplay = XOpenDisplay(NULL);
@@ -1429,21 +1429,21 @@ bool drglInit(drgl* pGL)
     if (pGL->pFBVisualInfo == NULL) {
         goto on_error;
     }
-    
+
     pGL->colormap = XCreateColormap(pGL->pDisplay, RootWindow(pGL->pDisplay, pGL->pFBVisualInfo->screen), pGL->pFBVisualInfo->visual, AllocNone);
-    
+
     pGL->rc = pGL->CreateContext(pGL->pDisplay, pGL->pFBVisualInfo, NULL, GL_TRUE);
     if (pGL->rc == NULL) {
         goto on_error;
     }
-    
+
     // We cannot call any OpenGL APIs until a context is made current. In order to make a context current
     // we will need a window. We just use a dummy window for this.
     pGL->dummyWindow = drgl__create_dummy_x11_window(pGL);
     if (pGL->dummyWindow == 0) {
         goto on_error;
     }
-    
+
     pGL->MakeCurrent(pGL->pDisplay, pGL->dummyWindow, pGL->rc);
 #endif
 
@@ -2126,15 +2126,15 @@ void drglUninit(drgl* pGL)
     if (pGL->dummyWindow) {
         XDestroyWindow(pGL->pDisplay, pGL->dummyWindow);
     }
-    
+
     if (pGL->rc) {
         pGL->DestroyContext(pGL->pDisplay, pGL->rc);
     }
-    
+
     if (pGL->ownsDisplay) {
         XCloseDisplay(pGL->pDisplay);
     }
-    
+
     if (pGL->pOpenGLSO != NULL) {
         dlclose(pGL->pOpenGLSO);
     }
@@ -2172,7 +2172,7 @@ GLuint drglCreateShader(drgl* pGL, GLenum type, const GLchar* src, GLchar** pErr
 {
     if (pErrorOut != NULL) *pErrorOut = NULL;    // <-- Safety.
     if (pGL == NULL || src == NULL) return 0;
-    
+
 
     GLuint shader = pGL->CreateShader(type);
     if (shader == 0) {
@@ -2208,7 +2208,7 @@ GLuint drglCreateProgram(drgl* pGL, GLuint shaderCount, const GLuint* pShaders, 
 {
     if (pErrorOut != NULL) *pErrorOut = NULL;   // <-- Safety.
     if (pGL == NULL || shaderCount == 0 || pShaders == NULL) return 0;
-    
+
 
     GLuint program = pGL->CreateProgram();
     if (program == 0) {
@@ -2221,7 +2221,7 @@ GLuint drglCreateProgram(drgl* pGL, GLuint shaderCount, const GLuint* pShaders, 
     }
 
     pGL->LinkProgram(program);
-    
+
     GLint linkStatus;
     pGL->GetProgramiv(program, GL_LINK_STATUS, &linkStatus);
     if (linkStatus == GL_FALSE) {
@@ -2239,7 +2239,7 @@ GLuint drglCreateProgram(drgl* pGL, GLuint shaderCount, const GLuint* pShaders, 
         pGL->DeleteProgram(program);
         return 0;
     }
-    
+
 
     return program;
 }
@@ -2248,7 +2248,7 @@ GLuint drglCreateSimpleProgramFromStrings(drgl* pGL, const char* srcVS, const ch
 {
     if (pErrorOut != NULL) *pErrorOut = NULL;   // <-- Safety.
     if (pGL == NULL) return 0;
-    
+
     GLuint shaders[2] = {0, 0};
     GLuint shaderCount = 0;
 
@@ -2261,7 +2261,7 @@ GLuint drglCreateSimpleProgramFromStrings(drgl* pGL, const char* srcVS, const ch
 
         shaderCount += 1;
     }
-    
+
     // Fragment.
     if (srcFS != NULL) {
         shaders[shaderCount] = drglCreateShader(pGL, GL_FRAGMENT_SHADER, srcFS, pErrorOut);
@@ -2278,7 +2278,7 @@ GLuint drglCreateSimpleProgramFromStrings(drgl* pGL, const char* srcVS, const ch
     }
 
     GLuint program = drglCreateProgram(pGL, shaderCount, shaders, pErrorOut);
-    
+
     for (GLuint iShader = 0; iShader < shaderCount; ++iShader) {
         pGL->DeleteShader(shaders[iShader]);
     }
@@ -2335,7 +2335,10 @@ GLboolean drglIsWGLExtensionSupported(drgl* pGL, const char* ext)
 #ifdef DRGL_X11
 GLboolean drglIsX11ExtensionSupported(drgl* pGL, const char* ext)
 {
-    // TODO: IMPLEMENT ME
+    if (pGL->QueryExtensionsString) {
+        return drglIsExtensionInString(ext, pGL->QueryExtensionsString(pGL->pDisplay, XDefaultScreen(pGL->pDisplay)));
+    }
+
     return GL_FALSE;
 }
 #endif
