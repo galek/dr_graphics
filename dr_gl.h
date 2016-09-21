@@ -1273,7 +1273,7 @@ void* drgl__get_proc_address(drgl* pGL, const char* name)
     
     void* func = NULL;
     if (pGL->GetProcAddress != NULL) {
-        func = pGL->GetProcAddress(name);
+        func = (void*)pGL->GetProcAddress((const GLubyte*)name);
     }
     
     if (func == NULL) {
@@ -1370,6 +1370,23 @@ bool drglInit(drgl* pGL)
 #endif
 
 #ifdef DRGL_X11
+    int attribs[] = {
+        GLX_RGBA,
+        GLX_RED_SIZE,      8,
+        GLX_GREEN_SIZE,    8,
+        GLX_BLUE_SIZE,     8,
+        GLX_ALPHA_SIZE,    8,
+        GLX_DEPTH_SIZE,    24,
+        GLX_STENCIL_SIZE,  8,
+        None,                   // Reserved for GLX_DOUBLEBUFFER
+        None, None
+    };
+    
+    // TODO: Add support for single buffered context's.
+    //if (!isSingleBuffered) {
+        attribs[13] = GLX_DOUBLEBUFFER;
+    //}
+
     pGL->pOpenGLSO = dlopen("libGL.so", RTLD_LAZY | RTLD_LOCAL);
     if (pGL->pOpenGLSO == NULL) {
         goto on_error;
@@ -1407,24 +1424,7 @@ bool drglInit(drgl* pGL)
     if (pGL->pDisplay == NULL) {
         goto on_error;
     }
-    
-    int attribs[] = {
-        GLX_RGBA,
-        GLX_RED_SIZE,      8,
-        GLX_GREEN_SIZE,    8,
-        GLX_BLUE_SIZE,     8,
-        GLX_ALPHA_SIZE,    8,
-        GLX_DEPTH_SIZE,    24,
-        GLX_STENCIL_SIZE,  8,
-        None,                   // Reserved for GLX_DOUBLEBUFFER
-        None, None
-    };
-    
-    // TODO: Add support for single buffered context's.
-    //if (!isSingleBuffered) {
-        attribs[13] = GLX_DOUBLEBUFFER;
-    //}
-    
+
     pGL->pFBVisualInfo = pGL->ChooseVisual(pGL->pDisplay, DefaultScreen(pGL->pDisplay), attribs);
     if (pGL->pFBVisualInfo == NULL) {
         goto on_error;
