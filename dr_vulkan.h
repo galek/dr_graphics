@@ -2986,11 +2986,13 @@ VkImageCreateInfo drvkSimpleImageCreateInfo2D(VkFormat format, uint32_t width, u
 VkImageViewCreateInfo drvkDefaultImageViewCreateInfo();
 VkFramebufferCreateInfo drvkDefaultFramebufferCreateInfo();
 VkRenderPassCreateInfo drvkDefaultRenderPassCreateInfo();
+VkBufferCreateInfo drvkDefaultBufferCreateInfo();
 VkSubmitInfo drvkDefaultSubmitInfo();
 VkImageMemoryBarrier drvkDefaultImageMemoryBarrier();
 VkComponentMapping drvkDefaultComponentMapping();
 VkRenderPassBeginInfo drvkDefaultrenderPassBeginInfo();
 VkGraphicsPipelineCreateInfo drvkDefaultGraphicsPipelineCreateInfo();
+VkSamplerCreateInfo drvkDefaultSamplerCreateInfo();
 VkWriteDescriptorSet drvkDefaultWriteDescriptorSet();
 VkImageSubresourceRange drvkImageSubresourceRange(VkImageAspectFlags aspectMask, uint32_t baseMipLevel, uint32_t levelCount, uint32_t baseArrayLayer, uint32_t layerCount);
 VkExtent3D drvkExtent3D(uint32_t width, uint32_t height, uint32_t depth);
@@ -3026,6 +3028,14 @@ VkResult drvkAllocateCommandBuffers(VkDevice device, VkCommandPool commandPool, 
 
 // Helper for creating a shader module.
 VkResult drvkCreateShaderModule(VkDevice device, size_t codeSize, const uint32_t* pCode, const VkAllocationCallbacks* pAllocator, VkShaderModule* pShaderModule);
+
+// Helper for creating a buffer and allocating memory that is suitable to act as a staging buffer.
+VkResult drvkCreateStagingBuffer(VkPhysicalDevice physicalDevice, VkDevice device, size_t dataSize, const void* pData, const VkAllocationCallbacks* pAllocator, VkBuffer* pBuffer, VkDeviceMemory* pMemory);
+
+// Helper for flushing a region of memory.
+VkResult drvkFlushMemory(VkDevice device, VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size);
+
+
 
 
 
@@ -3715,6 +3725,14 @@ VkRenderPassCreateInfo drvkDefaultRenderPassCreateInfo()
     return result;
 }
 
+VkBufferCreateInfo drvkDefaultBufferCreateInfo()
+{
+    VkBufferCreateInfo result;
+    memset(&result, 0, sizeof(result));
+    result.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    return result;
+}
+
 VkSubmitInfo drvkDefaultSubmitInfo()
 {
     VkSubmitInfo result;
@@ -3744,6 +3762,14 @@ VkGraphicsPipelineCreateInfo drvkDefaultGraphicsPipelineCreateInfo()
     VkGraphicsPipelineCreateInfo result;
     memset(&result, 0, sizeof(result));
     result.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    return result;
+}
+
+VkSamplerCreateInfo drvkDefaultSamplerCreateInfo()
+{
+    VkSamplerCreateInfo result;
+    memset(&result, 0, sizeof(result));
+    result.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     return result;
 }
 
@@ -3983,6 +4009,65 @@ VkResult drvkCreateShaderModule(VkDevice device, size_t codeSize, const uint32_t
 {
     VkShaderModuleCreateInfo info = drvkShaderModuleCreateInfo(codeSize, pCode);
     return vkCreateShaderModule(device, &info, pAllocator, pShaderModule);
+}
+
+VkResult drvkCreateStagingBuffer(VkPhysicalDevice physicalDevice, VkDevice device, size_t dataSize, const void* pData, const VkAllocationCallbacks* pAllocator, VkBuffer* pBuffer, VkDeviceMemory* pMemory)
+{
+    *pBuffer = NULL;
+    *pMemory = NULL;
+
+    VkBufferCreateInfo bufferInfo = drvkDefaultBufferCreateInfo();
+    bufferInfo.size = dataSize;
+    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VkBuffer buffer;
+    VkResult result = vkCreateBuffer(device, &bufferInfo, pAllocator, &buffer);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    VkDeviceMemory memory;
+    result = drvkAllocateAndBindBufferMemory(physicalDevice, device, buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, pAllocator, &memory);
+    if (result != VK_SUCCESS) {
+        vkDestroyBuffer(device, buffer, pAllocator);
+        return result;
+    }
+
+    // Set the data if we have some.
+    if (pData != NULL) {
+        void* pInternalData;
+        result = vkMapMemory(device, memory, 0, dataSize, 0, &pInternalData);
+        if (result != VK_SUCCESS) {
+            vkFreeMemory(device, memory, pAllocator);
+            vkDestroyBuffer(device, buffer, pAllocator);
+            return result;
+        }
+
+        memcpy(pInternalData, pData, dataSize);
+
+        // My intuition tells me that vkUnmapMemory() should do an implicit flush, however I am unable to find any documentation that
+        // confirms this behaviour. If I try to flush the memory _after_ unmapping, I get an error from the validation layer. Doing it
+        // _before_ unmapping makes the error go away.
+        drvkFlushMemory(device, memory, 0, dataSize);
+        vkUnmapMemory(device, memory);  // Is this an implicit flush?
+    }
+
+
+    *pBuffer = buffer;
+    *pMemory = memory;
+    return VK_SUCCESS;
+}
+
+VkResult drvkFlushMemory(VkDevice device, VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size)
+{
+    VkMappedMemoryRange memoryRange;
+    memoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    memoryRange.pNext = NULL;
+    memoryRange.memory = memory;
+    memoryRange.offset = offset;
+    memoryRange.size = size;
+    return vkFlushMappedMemoryRanges(device, 1, &memoryRange);
 }
 
 
