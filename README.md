@@ -1,7 +1,5 @@
-dr_graphics - Simple Graphics Library
-=====================================
-dr_graphics is a collection of simple libraries related to graphics. Every library is focused on
-simplicity over flexibility.
+This repository is a collection of simple libraries related to graphics. At the moment it's just
+API loaders.
 
 C/C++, public domain. Each file is independent of the others, except where noted.
 
