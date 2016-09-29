@@ -40,6 +40,7 @@
 // #define DR_GL_ENABLE_EXT_multisample
 // #define DR_GL_ENABLE_ARB_multisample
 // #define DR_GL_ENABLE_ARB_texture_multisample
+// #define DR_GL_ENABLE_ARB_debug_output
 
 #ifndef dr_gl_h
 #define dr_gl_h
@@ -1183,6 +1184,13 @@ typedef struct
     PFNGLSAMPLEMASKIPROC SampleMaski;
 #endif
 
+#ifdef DR_GL_ENABLE_ARB_debug_output
+    PFNGLDEBUGMESSAGECONTROLARBPROC DebugMessageControlARB;
+    PFNGLDEBUGMESSAGEINSERTARBPROC DebugMessageInsertARB;
+    PFNGLDEBUGMESSAGECALLBACKARBPROC DebugMessageCallbackARB;
+    PFNGLGETDEBUGMESSAGELOGARBPROC GetDebugMessageLogARB;
+#endif
+
 
 #ifdef DR_GL_ENABLE_EXT_swap_control
 #ifdef DRGL_WGL
@@ -2079,6 +2087,13 @@ bool drglInit(drgl* pGL)
     pGL->SampleMaski = (PFNGLSAMPLEMASKIPROC)drgl__get_proc_address(pGL, "glSampleMaski");
 #endif
 
+#ifdef DR_GL_ENABLE_ARB_debug_output
+    pGL->DebugMessageControlARB = (PFNGLDEBUGMESSAGECONTROLARBPROC)drgl__get_proc_address(pGL, "glDebugMessageControlARB");
+    pGL->DebugMessageInsertARB = (PFNGLDEBUGMESSAGEINSERTARBPROC)drgl__get_proc_address(pGL, "glDebugMessageInsertARB");
+    pGL->DebugMessageCallbackARB = (PFNGLDEBUGMESSAGECALLBACKARBPROC)drgl__get_proc_address(pGL, "glDebugMessageCallbackARB");
+    pGL->GetDebugMessageLogARB = (PFNGLGETDEBUGMESSAGELOGARBPROC)drgl__get_proc_address(pGL, "glGetDebugMessageLogARB");
+#endif
+
 
     // Platform-specific extensions
 #ifdef DRGL_WGL
@@ -2345,7 +2360,7 @@ GLboolean drglIsX11ExtensionSupported(drgl* pGL, const char* ext)
 
 GLboolean drglIsExtensionSupported(drgl* pGL, const char* ext)
 {
-#if GL_VERSION >= 300
+#if DR_GL_VERSION >= 300
     if (pGL->GetStringi) {
         GLint supportedExtensionCount = 0;
         pGL->GetIntegerv(GL_NUM_EXTENSIONS, &supportedExtensionCount);
