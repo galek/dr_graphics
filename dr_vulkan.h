@@ -4131,10 +4131,10 @@ void drvkFilterUnsupportedLayers(uint32_t* pLayerCount, const char** ppLayers)
     vkEnumerateInstanceLayerProperties(&supportedLayerCount, supportedLayers);
 
     for (uint32_t iDesiredLayer = 0; iDesiredLayer < *pLayerCount; /* DO NOTHING */) {
-        bool isSupported = false;
+        vkBool32 isSupported = VK_FALSE;
         for (uint32_t iSupportedLayer = 0; iSupportedLayer < supportedLayerCount; ++iSupportedLayer) {
             if (strcmp(supportedLayers[iSupportedLayer].layerName, ppLayers[iDesiredLayer]) == 0) {
-                isSupported = true;
+                isSupported = VK_TRUE;
                 break;
             }
         }
@@ -4162,10 +4162,10 @@ void drvkFilterUnsupportedInstanceExtensions(const char* pLayerName, uint32_t* p
     vkEnumerateInstanceExtensionProperties(pLayerName, &supportedExtensionCount, supportedExtensions);
 
     for (uint32_t iDesiredExtension = 0; iDesiredExtension < *pExtensionCount; /* DO NOTHING */) {
-        bool isSupported = false;
+        vkBool32 isSupported = VK_FALSE;
         for (uint32_t iSupportedExtension = 0; iSupportedExtension < supportedExtensionCount; ++iSupportedExtension) {
             if (strcmp(supportedExtensions[iSupportedExtension].extensionName, ppExtensions[iDesiredExtension]) == 0) {
-                isSupported = true;
+                isSupported = VK_TRUE;
                 break;
             }
         }
@@ -4193,10 +4193,10 @@ void drvkFilterUnsupportedDeviceExtensions(VkPhysicalDevice physicalDevice, cons
     vkEnumerateDeviceExtensionProperties(physicalDevice, pLayerName, &supportedExtensionCount, supportedExtensions);
 
     for (uint32_t iDesiredExtension = 0; iDesiredExtension < *pExtensionCount; /* DO NOTHING */) {
-        bool isSupported = false;
+        vkBool32 isSupported = VK_FALSE;
         for (uint32_t iSupportedExtension = 0; iSupportedExtension < supportedExtensionCount; ++iSupportedExtension) {
             if (strcmp(supportedExtensions[iSupportedExtension].extensionName, ppExtensions[iDesiredExtension]) == 0) {
-                isSupported = true;
+                isSupported = VK_TRUE;
                 break;
             }
         }
